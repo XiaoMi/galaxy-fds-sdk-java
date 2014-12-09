@@ -320,6 +320,20 @@ public interface GalaxyFDS {
       Date expiration) throws GalaxyFDSClientException;
 
   /**
+   * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName The name of the bucket containing the desired object
+   * @param objectName The name of the desired object
+   * @param expiration The time at which the returned pre-signed URL will expire
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to download the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
+      Date expiration) throws GalaxyFDSClientException;
+
+  /**
    * Returns a pre-signed URI for accessing Galaxy FDS resource.
    *
    * @param bucketName The name of the bucket containing the desired object
@@ -332,5 +346,20 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   public URI generatePresignedUri(String bucketName, String objectName,
+      Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException;
+
+  /**
+   * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName The name of the bucket containing the desired object
+   * @param objectName The name of the desired object
+   * @param expiration The time at which the returned pre-signed URL will expire
+   * @param httpMethod The HTTP method verb to use for this URL
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException;
 }

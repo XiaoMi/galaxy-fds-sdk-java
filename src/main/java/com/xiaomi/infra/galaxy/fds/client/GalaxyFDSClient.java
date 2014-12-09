@@ -70,6 +70,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
   private final GalaxyFDSCredential credentail;
   private final Configuration conf;
   private final String fdsBaseUri;
+  private final String fdsCdnBaseUri;
   private final ClientConfig clientConfig;
   private Client client;
   private String delimiter = "/";
@@ -78,6 +79,8 @@ public class GalaxyFDSClient implements GalaxyFDS {
 
   public static final String GALAXY_FDS_SERVER_BASE_URI_KEY =
       "galaxy.fds.server.base.uri";
+  public static final String GALAXY_FDS_SERVER_CDN_BASE_URI_KEY =
+      "galaxy.fds.server.cdn.base.uri";
 
   // TODO(wuzesheng) Make the authenticator configurable and let the
   // authenticator supply sign algorithm and generate signature
@@ -98,6 +101,9 @@ public class GalaxyFDSClient implements GalaxyFDS {
 
     fdsBaseUri = this.conf.get(GALAXY_FDS_SERVER_BASE_URI_KEY,
         Common.DEFAULT_FDS_SERVICE_BASE_URI);
+
+    fdsCdnBaseUri = this.conf.get(GALAXY_FDS_SERVER_CDN_BASE_URI_KEY,
+        Common.DEFAULT_CDN_SERVICE_URI);
 
     clientConfig = new ClientConfig();
     clientConfig.register(new FDSClientLogFilter());
@@ -660,10 +666,31 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
+      Date expiration) throws GalaxyFDSClientException {
+    return generatePresignedCdnUri(bucketName, objectName,
+        expiration, HttpMethod.GET);
+  }
+
+  @Override
   public URI generatePresignedUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
+    return generatePresignedUri(fdsBaseUri, bucketName, objectName,
+        expiration, httpMethod);
+  }
+
+  @Override
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
+      Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
+    return generatePresignedUri(fdsCdnBaseUri, bucketName, objectName,
+        expiration, httpMethod);
+  }
+
+  private URI generatePresignedUri(String baseUri, String bucketName,
+      String objectName, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException {
     try {
-      URI uri = new URI(fdsBaseUri + bucketName + "/" + objectName + "?"
+      URI uri = new URI(baseUri + bucketName + "/" + objectName + "?"
           + Common.GALAXY_ACCESS_KEY_ID + "=" + credentail.getGalaxyAccessId()
           + "&" + Common.EXPIRES + "=" + expiration.getTime());
       byte[] signature = Signer.signToBase64(httpMethod, uri, null,
