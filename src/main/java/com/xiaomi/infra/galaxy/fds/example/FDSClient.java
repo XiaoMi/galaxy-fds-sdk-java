@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 
+import com.xiaomi.infra.galaxy.fds.client.FDSClientConfiguration;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDS;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDSClient;
 import com.xiaomi.infra.galaxy.fds.client.credential.BasicFDSCredential;
@@ -30,11 +31,13 @@ public class FDSClient {
 
     // Use the following Configuration object to configure the Galaxy FDS.
     Configuration conf = new Configuration();
-    conf.set(GalaxyFDSClient.GALAXY_FDS_SERVER_BASE_URI_KEY,
-        "http://files.fds.api.xiaomi.com/");
 
     // Construct the GalaxyFDSClient object.
-    GalaxyFDS fdsClient = new GalaxyFDSClient(credential, conf);
+    FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
+    fdsConfig.enableHttps(true);
+    fdsConfig.enableCdnForUpload(false);
+    fdsConfig.enableCdnForDownload(true);
+    GalaxyFDS fdsClient = new GalaxyFDSClient(credential, fdsConfig);
 
     // Check the existence of the bucket
     if (!fdsClient.doesBucketExist(BUCKET_NAME)) {
