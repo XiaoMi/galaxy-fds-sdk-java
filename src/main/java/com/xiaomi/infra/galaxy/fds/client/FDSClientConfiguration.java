@@ -9,8 +9,8 @@ public class FDSClientConfiguration {
   private static final String URI_HTTPS_PREFIX = "https://";
   private static final String URI_FILES = "files";
   private static final String URI_CDN = "cdn";
-  private static final String URI_CDNS = "cdns";
   private static final String URI_FDS_SUFFIX = ".fds.api.xiaomi.com/";
+  private static final String URI_FDS_SSL_SUFFIX = ".fds-ssl.api.xiaomi.com/";
 
   private String regionName;
   private boolean enableHttps;
@@ -74,47 +74,52 @@ public class FDSClientConfiguration {
   }
 
   String getBaseUri() {
-    return buildBaseUri(URI_FILES);
+    return buildBaseUri(false);
   }
 
   String getCdnBaseUri() {
-    return buildBaseUri(getCdnRegionNameSuffix());
+    return buildBaseUri(true);
   }
 
   String getDownloadBaseUri() {
-    if (enableCdnForDownload) {
-      return buildBaseUri(getCdnRegionNameSuffix());
-    }
-    else {
-      return buildBaseUri(URI_FILES);
-    }
+    return buildBaseUri(enableCdnForDownload);
   }
 
   String getUploadBaseUri() {
-    if (enableCdnForUpload) {
-      return buildBaseUri(getCdnRegionNameSuffix());
-    }
-    else {
-      return buildBaseUri(URI_FILES);
-    }
+    return buildBaseUri(enableCdnForUpload);
   }
 
-  String buildBaseUri(String regionNameSuffix) {
+  String buildBaseUri(boolean enableCdn) {
     if (enableUnitTestMode) {
       return baseUriForUnitTest;
     }
 
     StringBuilder sb = new StringBuilder();
     sb.append(enableHttps ? URI_HTTPS_PREFIX : URI_HTTP_PREFIX);
-    if (!regionName.isEmpty()) {
-      sb.append(regionName + "-");
-    }
-    sb.append(regionNameSuffix);
-    sb.append(URI_FDS_SUFFIX);
+    sb.append(getBaseUriPrefix(enableCdn, regionName));
+    sb.append(getBaseUriSuffix(enableCdn, enableHttps));
     return sb.toString();
   }
 
-  private String getCdnRegionNameSuffix() {
-    return enableHttps ? URI_CDNS : URI_CDN;
+  private String getBaseUriPrefix(boolean enableCdn, String regionName) {
+    if (regionName.isEmpty()) {
+      if (enableCdn) {
+        return URI_CDN;
+      }
+      return URI_FILES;
+    } else {
+      if (enableCdn) {
+        return regionName + "-" + URI_CDN;
+      } else {
+        return regionName + "-" + URI_FILES;
+      }
+    }
+  }
+
+  private String getBaseUriSuffix(boolean enableCdn, boolean enableHttps) {
+    if (enableCdn && enableHttps) {
+      return URI_FDS_SSL_SUFFIX;
+    }
+    return URI_FDS_SUFFIX;
   }
 }

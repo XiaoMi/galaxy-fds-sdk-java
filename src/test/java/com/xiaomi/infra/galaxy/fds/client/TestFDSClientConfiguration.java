@@ -9,6 +9,7 @@ import org.junit.Test;
 public class TestFDSClientConfiguration {
 
   private final String URI_FDS_SUFFIX = ".fds.api.xiaomi.com/";
+  private final String URI_FDS_SSL_SUFFIX = ".fds-ssl.api.xiaomi.com/";
 
   @Test
   public void testDefaultConfigurationValue() {
@@ -32,7 +33,7 @@ public class TestFDSClientConfiguration {
         "https://files" + URI_FDS_SUFFIX);
     fdsConfig.enableCdnForUpload(true);
     Assert.assertEquals(fdsConfig.getUploadBaseUri(),
-        "https://cdns" + URI_FDS_SUFFIX);
+        "https://cdn" + URI_FDS_SSL_SUFFIX);
     fdsConfig.enableHttps(false);
     Assert.assertEquals(fdsConfig.getUploadBaseUri(),
         "http://cdn" + URI_FDS_SUFFIX);
@@ -46,28 +47,31 @@ public class TestFDSClientConfiguration {
         "http://cdn" + URI_FDS_SUFFIX);
     fdsConfig.enableHttps(true);
     Assert.assertEquals(fdsConfig.getDownloadBaseUri(),
-        "https://cdns" + URI_FDS_SUFFIX);
+        "https://cdn" + URI_FDS_SSL_SUFFIX);
   }
 
   @Test
   public void testBuildBaseUri() {
     final String regionName = "regionName";
-    final String regionNameSuffix = "regionNameSuffix";
     FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
 
     // Test against flag enable https.
     fdsConfig.setRegionName("");
     fdsConfig.enableHttps(true);
-    Assert.assertEquals("https://" + regionNameSuffix + URI_FDS_SUFFIX,
-        fdsConfig.buildBaseUri(regionNameSuffix));
+    Assert.assertEquals("https://files" + URI_FDS_SUFFIX,
+        fdsConfig.buildBaseUri(false));
     fdsConfig.enableHttps(false);
-    Assert.assertEquals("http://" + regionNameSuffix + URI_FDS_SUFFIX,
-        fdsConfig.buildBaseUri(regionNameSuffix));
+    Assert.assertEquals("http://files" + URI_FDS_SUFFIX,
+        fdsConfig.buildBaseUri(false));
 
     // Test against region name.
     fdsConfig.setRegionName(regionName);
     fdsConfig.enableHttps(true);
-    Assert.assertEquals("https://" + regionName + "-" + regionNameSuffix +
-        URI_FDS_SUFFIX, fdsConfig.buildBaseUri(regionNameSuffix));
+    Assert.assertEquals("https://" + regionName + "-files" + URI_FDS_SUFFIX,
+        fdsConfig.buildBaseUri(false));
+
+    fdsConfig.enableCdnForDownload(true);
+    Assert.assertEquals("https://" + regionName + "-cdn" + URI_FDS_SSL_SUFFIX,
+        fdsConfig.buildBaseUri(true));
   }
 }
