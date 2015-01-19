@@ -27,6 +27,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
@@ -514,7 +515,8 @@ public class GalaxyFDSClient implements GalaxyFDS {
         .headers(headers)
         .get();
 
-    if (response.getStatus() == Response.Status.OK.getStatusCode()) {
+    if (response.getStatus() == Status.OK.getStatusCode() ||
+        response.getStatus() == Status.PARTIAL_CONTENT.getStatusCode()) {
       FDSObject object = new FDSObject();
       FDSObjectInputStream stream = new FDSObjectInputStream(response);
       object.setObjectContent(stream);
