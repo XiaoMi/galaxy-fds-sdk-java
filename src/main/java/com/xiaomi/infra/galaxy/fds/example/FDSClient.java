@@ -4,8 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
-
 import com.xiaomi.infra.galaxy.fds.client.FDSClientConfiguration;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDS;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDSClient;
@@ -28,9 +26,6 @@ public class FDSClient {
       throws GalaxyFDSClientException, IOException {
     GalaxyFDSCredential credential = new BasicFDSCredential(
         APP_ACCESS_KEY, APP_ACCESS_SECRET);
-
-    // Use the following Configuration object to configure the Galaxy FDS.
-    Configuration conf = new Configuration();
 
     // Construct the GalaxyFDSClient object.
     FDSClientConfiguration fdsConfig = new FDSClientConfiguration();

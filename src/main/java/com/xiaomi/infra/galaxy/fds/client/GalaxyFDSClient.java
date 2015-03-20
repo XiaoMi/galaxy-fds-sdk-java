@@ -33,7 +33,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.glassfish.jersey.client.ClientConfig;
 
 import com.xiaomi.infra.galaxy.fds.SubResource;
@@ -91,23 +90,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   private static final Log LOG = LogFactory.getLog(GalaxyFDSClient.class);
-
-  @Deprecated
-  public GalaxyFDSClient(GalaxyFDSCredential credential, Configuration conf) {
-    this.credential = credential;
-    this.fdsConfig = new FDSClientConfiguration();
-
-    String fdsBaseUri = conf.get(GALAXY_FDS_SERVER_BASE_URI_KEY,
-        Common.DEFAULT_FDS_SERVICE_BASE_URI);
-
-    // Only considering the protocol used in fdsBaseUri, http(s), is enough
-    // for compatibility.
-    if (fdsBaseUri.startsWith("http://")) {
-      fdsConfig.enableHttps(false);
-    }
-
-    init();
- }
 
   public GalaxyFDSClient(GalaxyFDSCredential credential,
       FDSClientConfiguration fdsConfig) {
