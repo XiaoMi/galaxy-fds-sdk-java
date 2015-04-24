@@ -1,28 +1,25 @@
-文件存储(FDS)Java SDK使用介绍
-=============================
-##### 编译安装sdk的jar到本地或maven仓库
+# Galaxy FDS Java SDK User Guide
 
-    mvn clean package install
+## Installing
 
-##### 把jar文件放到项目的classpath中。如果项目使用maven进行依赖管理，在项目的pom.xml文件中加入galaxy-fds-sdk-java依赖：
-	
-	<dependency>
-    	<groupId>com.xiaomi.infra.galaxy</groupId>
-    	<artifactId>galaxy-fds-sdk-java</artifactId>
-    	<version>1.4-SNAPSHOT</version>
-	</dependency>
+1. Download source codes from github ,build and install the jars into local maven repository (or deploy to a central Maven repository).
+github link: [https://github.com/XiaoMi/galaxy-fds-sdk-java.git]()
 
+`mvn clean package install`
 
-FDS Java SDK User Guide
-========================
-##### Build from source and install the jars into local maven repository or deploy to a central repository
+2. If use Maven to management, users can download the latest jar for maven central repository.The latest version is 1.4.0.
 
-    mvn clean package install
+## Usage
 
-##### Import the above jar into the project classpath or add the following dependency if your project is managed with maven:
+1. Import the above jars into the project classpath or add the following dependency if your project is managed with Maven.
 
+```
     <dependency>
-      <groupId>com.xiaomi.infra.galaxy</groupId>
-      <artifactId>galaxy-fds-sdk-java</artifactId>
-      <version>1.4-SNAPSHOT</version>
+      	<groupId>com.xiaomi.infra.galaxy</groupId>
+    		<artifactId>galaxy-fds-sdk-java</artifactId>
+    		<version>1.4.0</version>
     </dependency>
+```
+
+2. Add the jar to classpath.
+
