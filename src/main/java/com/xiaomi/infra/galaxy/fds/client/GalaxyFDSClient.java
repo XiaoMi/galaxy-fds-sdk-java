@@ -335,6 +335,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
     String bucketName = previousObjectListing.getBucketName();
     String prefix = previousObjectListing.getPrefix();
     String marker = previousObjectListing.getNextMarker();
+    int maxKeys = previousObjectListing.getMaxKeys();
 
     URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[])null);
     MultivaluedMap<String, Object> headers = prepareRequestHeader(
@@ -343,6 +344,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
     Response response = client.target(uri.toString())
         .queryParam("prefix", prefix)
         .queryParam("marker", marker)
+        .queryParam("maxKeys", maxKeys)
         .request()
         .headers(headers)
         .get();
