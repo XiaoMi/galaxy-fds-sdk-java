@@ -7,7 +7,7 @@ github link: [https://github.com/XiaoMi/galaxy-fds-sdk-java.git]()
 
 `mvn clean package install`
 
-2. If use Maven to management, users can download the latest jar for maven central repository.The latest version is 1.4.0.
+2. If use Maven to management, users can download the latest jar for maven central repository.The latest version is 1.5.0.
 
 ## Usage
 
@@ -17,7 +17,7 @@ github link: [https://github.com/XiaoMi/galaxy-fds-sdk-java.git]()
     <dependency>
       	<groupId>com.xiaomi.infra.galaxy</groupId>
     		<artifactId>galaxy-fds-sdk-java</artifactId>
-    		<version>1.4.0</version>
+    		<version>1.5.0</version>
     </dependency>
 ```
 
