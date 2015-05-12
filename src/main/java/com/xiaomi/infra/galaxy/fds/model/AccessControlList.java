@@ -44,7 +44,7 @@ public class AccessControlList {
 
   public enum GrantType {
     USER,
-    GROUP;
+    GROUP
   }
 
   public static class Grant {

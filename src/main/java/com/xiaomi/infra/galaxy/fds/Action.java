@@ -20,6 +20,7 @@ public enum Action {
   PutBucketQuota(true),
   RenameObject(true),
   GetMetrics(false),
+  PutClientMetrics(false),
   GetObjectMetadata(true),
   InitMultiPartUpload(true),
   ListMultiPartUploads(true),
@@ -29,6 +30,11 @@ public enum Action {
   ListParts(true),
   GetBucketUsage(true),
   GetDeveloperInfo(false),
+  PrefetchObject(true),
+  RefreshObject(true),
+  PutDomainMapping(true),
+  ListDomainMappings(true),
+  DeleteDomainMapping(true),
   Unknown(false);
 
   private final boolean needThrottle;

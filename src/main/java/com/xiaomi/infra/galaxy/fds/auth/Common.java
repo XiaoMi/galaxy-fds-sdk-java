@@ -31,6 +31,11 @@ public class Common {
   public static final String LAST_MODIFIED = "last-modified";
   public static final String RANGE = "range";
 
+  // Request properties used for metrics collection
+  public static final String ACTION = "action";
+  public static final String REQUEST_METRICS = "request-metrics";
+  public static final String METRICS_COLLECTOR = "metrics-collector";
+
   /**
    * The default uri for fds service base uri
    */

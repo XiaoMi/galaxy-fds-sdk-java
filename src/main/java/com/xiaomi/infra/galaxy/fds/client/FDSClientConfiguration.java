@@ -16,18 +16,24 @@ public class FDSClientConfiguration {
   private boolean enableHttps;
   private boolean enableCdnForUpload;
   private boolean enableCdnForDownload;
+  private boolean enableMd5Calculate;
 
   private boolean enableUnitTestMode;
   private String baseUriForUnitTest;
+
+  private boolean enableMetrics;
 
   public FDSClientConfiguration() {
     enableHttps = true;
     regionName = "";
     enableCdnForUpload = false;
     enableCdnForDownload = true;
+    enableMd5Calculate = false;
 
     enableUnitTestMode = false;
     baseUriForUnitTest = "";
+
+    enableMetrics = false;
   }
 
   public String getRegionName() {
@@ -59,6 +65,26 @@ public class FDSClientConfiguration {
 
   public void enableCdnForDownload(boolean enableCdnForDownload) {
     this.enableCdnForDownload = enableCdnForDownload;
+  }
+
+  public boolean isMd5CalculateEnabled() {
+    return enableMd5Calculate;
+  }
+
+  public void setEnableMd5Calculate(boolean enableMd5Calculate) {
+    this.enableMd5Calculate = enableMd5Calculate;
+  }
+
+  public void enableMetrics() {
+    enableMetrics = true;
+  }
+
+  public void disableMetrics() {
+    enableMetrics = false;
+  }
+
+  public boolean isMetricsEnabled() {
+    return enableMetrics;
   }
 
   boolean isEnabledUnitTestMode() {

@@ -87,8 +87,8 @@ public interface GalaxyFDS {
   /**
    * Sets the QuotaPolicy(QUOTA) of the specified fds bucket.
    *
-   * @param bucketName The name of the bucket
-   * @param quotaPolicy  The new quota policy for the bucket
+   * @param bucketName  The name of the bucket
+   * @param quotaPolicy The new quota policy for the bucket
    * @throws GalaxyFDSClientException
    */
   void setBucketQuota(String bucketName, QuotaPolicy quotaPolicy)
@@ -97,7 +97,7 @@ public interface GalaxyFDS {
   /**
    * Returns a list of summary information about the objects in the specified
    * fds bucket.
-   *
+   * <p/>
    * Because buckets can contain a virtually unlimited number of keys, the
    * complete results of a list query can be extremely large. To manage large
    * result sets, galaxy fds uses pagination to split them into multiple
@@ -182,7 +182,7 @@ public interface GalaxyFDS {
    */
   public PutObjectResult putObject(String bucketName, String objectName,
       InputStream input, FDSObjectMetadata metadata)
-          throws GalaxyFDSClientException;
+      throws GalaxyFDSClientException;
 
   /**
    * Uploads the specified file to a galaxy fds bucket, an unique object name
@@ -209,7 +209,7 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult postObject(String bucketName,  InputStream input,
+  public PutObjectResult postObject(String bucketName, InputStream input,
       FDSObjectMetadata metadata) throws GalaxyFDSClientException;
 
   /**
@@ -230,7 +230,7 @@ public interface GalaxyFDS {
    *
    * @param bucketName The name of the bucket where the object stores
    * @param objectName The name of the object to get
-   * @param pos The position to start read
+   * @param pos        The position to start read
    * @return The object stored in galaxy fds under the specifed bucket
    * @throws GalaxyFDSClientException
    */
@@ -297,12 +297,85 @@ public interface GalaxyFDS {
   /**
    * Rename the object with the specified name under the specified bucket.
    *
-   * @param bucketName The name of the bucket where the object stores
+   * @param bucketName    The name of the bucket where the object stores
    * @param srcObjectName The name of the source object
    * @param dstObjectName The name of the destination object
    * @throws GalaxyFDSClientException
    */
   public void renameObject(String bucketName, String srcObjectName, String dstObjectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Prefetch the specified object to cdn. The object must have public access
+   * @param bucketName The name of the bucket where the object stores
+   * @param objectName The name of the object to prefetch
+   * @throws GalaxyFDSClientException
+   */
+  public void prefetchObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Refresh the object cached in cdn. The object must have public access
+   * @param bucketName The name of the bucket where the object stores
+   * @param objectName The name of the object to refresh
+   * @throws GalaxyFDSClientException
+   */
+  public void refreshObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Add a domain mapping for the specified bucket.
+   * @param bucketName
+   * @param domainName
+   * @throws GalaxyFDSClientException
+   */
+  public void putDomainMapping(String bucketName, String domainName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Get all domains mapped to the specified bucket.
+   * @param bucketName
+   * @throws GalaxyFDSClientException
+   */
+  public List<String> listDomainMappings(String bucketName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Delete the specified domain mapping for the specified bucket.
+   * @param bucketName
+   * @throws GalaxyFDSClientException
+   */
+  public void deleteDomainMapping(String bucketName, String domainName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Set the object public to all users, it will also be pre-fetched to CDN.
+   * @param bucketName The name of the bucket containing the desired object
+   * @param objectName The name of the desired object
+   * @throws GalaxyFDSClientException
+   */
+  public void setPublic(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Set the object public to all users.
+   * @param bucketName The name of the bucket containing the desired object
+   * @param objectName The name of the desired object
+   * @param disablePrefetch Disable prefetch to CDN
+   * @throws GalaxyFDSClientException
+   */
+  public void setPublic(String bucketName, String objectName,
+      boolean disablePrefetch) throws GalaxyFDSClientException;
+
+  /**
+   * Return a URI for downloading Galaxy FDS resource.
+   *
+   * @param bucketName the name of the bucket containing the desired object.
+   * @param ObjectName the name of the desired object.
+   * @return A URI for downloading Galaxy FDS resource.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generateDownloadObjectUri(String bucketName, String ObjectName)
       throws GalaxyFDSClientException;
 
   /**

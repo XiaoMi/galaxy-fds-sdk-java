@@ -11,6 +11,7 @@ public enum FDSError {
   ObjectAccessDenied("Object Access Denied", Response.Status.FORBIDDEN),
   ObjectAlreadyExists("Object Already Exists", Response.Status.CONFLICT),
   ObjectNotFound("Object Not Found", Response.Status.NOT_FOUND),
+  BrokenObject("Object Data Broken", Status.INTERNAL_SERVER_ERROR),
   InternalServerError("Internal Server Error", Response.Status.INTERNAL_SERVER_ERROR),
   RequestTimeout("Request Timeout", Response.Status.BAD_REQUEST),
   InvalidRequest("Invalid Request", Response.Status.BAD_REQUEST),
@@ -23,6 +24,7 @@ public enum FDSError {
   RequestNotSupported("Request not supported", Response.Status.NOT_IMPLEMENTED),
   InvalidRequestRange("Request out of range", Status.REQUESTED_RANGE_NOT_SATISFIABLE),
   AuthenticationFailed("Authentication failed", Status.FORBIDDEN),
+  DomainMappingAccessDenied("Domain Mapping Access Denied", Status.FORBIDDEN),
   Success("Success", Response.Status.OK);
 
   private final String description;
