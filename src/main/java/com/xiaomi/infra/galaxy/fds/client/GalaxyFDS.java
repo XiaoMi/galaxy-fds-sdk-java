@@ -6,6 +6,7 @@ import java.net.URI;
 import java.util.Date;
 import java.util.List;
 
+import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.auth.HttpMethod;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
@@ -435,4 +436,38 @@ public interface GalaxyFDS {
    */
   public URI generatePresignedCdnUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException;
+
+  /**
+   * Returns a pre-signed URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName  The name of the bucket containing the desired object
+   * @param objectName  The name of the desired object
+   * @param subResource The subresource of this request
+   * @param expiration  The time at which the returned pre-signed URL will expire
+   * @param httpMethod  The HTTP method verb to use for this URL
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedUri(String bucketName, String objectName,
+      SubResource subResource, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName  The name of the bucket containing the desired object
+   * @param objectName  The name of the desired object
+   * @param subResource The subresource of this request
+   * @param expiration  The time at which the returned pre-signed URL will expire
+   * @param httpMethod  The HTTP method verb to use for this URL
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresigneCdndUri(String bucketName, String objectName,
+      SubResource subResource, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException;
 }

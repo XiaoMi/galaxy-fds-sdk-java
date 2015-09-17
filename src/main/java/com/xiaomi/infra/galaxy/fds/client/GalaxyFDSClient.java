@@ -923,7 +923,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
-  @Deprecated
   public URI generatePresignedUri(String bucketName, String objectName,
       Date expiration) throws GalaxyFDSClientException {
     return generatePresignedUri(bucketName, objectName,
@@ -931,7 +930,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
-  @Deprecated
   public URI generatePresignedCdnUri(String bucketName, String objectName,
       Date expiration) throws GalaxyFDSClientException {
     return generatePresignedCdnUri(bucketName, objectName,
@@ -939,19 +937,33 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
-  @Deprecated
   public URI generatePresignedUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
     return generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
-        expiration, httpMethod);
+        null, expiration, httpMethod);
   }
 
   @Override
-  @Deprecated
   public URI generatePresignedCdnUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
     return generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
-        objectName, expiration, httpMethod);
+        objectName, null, expiration, httpMethod);
+  }
+
+  @Override
+  public URI generatePresignedUri(String bucketName, String objectName,
+      SubResource subResource, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException {
+    return generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
+        subResource, expiration, httpMethod);
+  }
+
+  @Override
+  public URI generatePresigneCdndUri(String bucketName, String objectName,
+      SubResource subResource, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException {
+    return generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
+        objectName, subResource, expiration, httpMethod);
   }
 
   /**
@@ -984,14 +996,23 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   private URI generatePresignedUri(String baseUri, String bucketName,
-      String objectName, Date expiration, HttpMethod httpMethod)
-      throws GalaxyFDSClientException {
+      String objectName, SubResource subResource, Date expiration,
+      HttpMethod httpMethod) throws GalaxyFDSClientException {
     try {
       URI uri = new URI(baseUri);
-      URI encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
-          uri.getPort(), "/" + bucketName + "/" + objectName,
-          Common.GALAXY_ACCESS_KEY_ID + "=" + credential.getGalaxyAccessId()
-              + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
+      URI encodedUri;
+      if (subResource == null) {
+        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
+            uri.getPort(), "/" + bucketName + "/" + objectName,
+            Common.GALAXY_ACCESS_KEY_ID + "=" + credential.getGalaxyAccessId()
+                + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
+      } else {
+        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
+            uri.getPort(), "/" + bucketName + "/" + objectName,
+            subResource.getName() + "&" +
+            Common.GALAXY_ACCESS_KEY_ID + "=" + credential.getGalaxyAccessId()
+            + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
+      }
 
       byte[] signature = Signer.signToBase64(httpMethod, encodedUri, null,
           credential.getGalaxyAccessSecret(), SIGN_ALGORITHM);
