@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,9 +19,11 @@ import javax.crypto.spec.SecretKeySpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.xiaomi.infra.galaxy.exception.GalaxyException;
 import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.auth.Common;
 import com.xiaomi.infra.galaxy.fds.auth.HttpMethod;
@@ -85,6 +88,43 @@ public class Signer {
       InvalidKeyException {
     return Base64.encode(sign(httpMethod, uri, httpHeaders,
         secretAccessKeyId, algorithm)).getBytes();
+  }
+
+  public static URI generatePresignedUri(String baseUri, String bucketName,
+      String objectName, List<String> subResources, Date expiration,
+      HttpMethod httpMethod, String accessId, String accessSecret,
+      SignAlgorithm signAlgorithm) throws GalaxyException{
+    try {
+      URI uri = new URI(baseUri);
+      URI encodedUri;
+      if (subResources == null || subResources.isEmpty()) {
+        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
+            uri.getPort(), "/" + bucketName + "/" + objectName,
+            Common.GALAXY_ACCESS_KEY_ID + "=" + accessId
+                + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
+      } else {
+        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
+            uri.getPort(), "/" + bucketName + "/" + objectName,
+            StringUtils.join(subResources, "&") + "&" +
+                Common.GALAXY_ACCESS_KEY_ID + "=" + accessId
+                + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
+      }
+
+      byte[] signature = Signer.signToBase64(httpMethod, encodedUri, null,
+          accessSecret, signAlgorithm);
+      return new URI(encodedUri.toString() + "&" + Common.SIGNATURE + "="
+          + new String(signature));
+    } catch (URISyntaxException e) {
+      LOG.error("Invalid URI syntax", e);
+      throw new GalaxyException("Invalid URI syntax", e);
+    } catch (InvalidKeyException e) {
+      LOG.error("Invalid secret key spec", e);
+      throw new GalaxyException("Invalid secret key spec", e);
+    } catch (NoSuchAlgorithmException e) {
+      LOG.error("Unsupported signature algorithm:" + signAlgorithm, e);
+      throw new GalaxyException("Unsupported signature algorithm:"
+          + signAlgorithm, e);
+    }
   }
 
   static String constructStringToSign(HttpMethod httpMethod, URI uri,

@@ -12,10 +12,13 @@ public enum Action {
   HeadObject(true),
   DeleteObject(true),
   GetObject(true),
+  GetBucketMeta(true),
   GetBucketACL(true),
   PutBucketACL(true),
+  DeleteBucketACL(true),
   GetObjectACL(true),
   PutObjectACL(true),
+  DeleteObjectACL(true),
   GetBucketQuota(true),
   PutBucketQuota(true),
   RenameObject(true),
@@ -35,6 +38,10 @@ public enum Action {
   PutDomainMapping(true),
   ListDomainMappings(true),
   DeleteDomainMapping(true),
+  ListTrashObjects(true),
+  RestoreObject(true),
+  GetTimeSeriesData(true),
+  GetPresignedUrl(true),
   Unknown(false);
 
   private final boolean needThrottle;

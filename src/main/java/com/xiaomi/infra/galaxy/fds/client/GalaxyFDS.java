@@ -46,6 +46,13 @@ public interface GalaxyFDS {
   public void deleteBucket(String bucketName) throws GalaxyFDSClientException;
 
   /**
+   * Gets a fds bucket with the specified name.
+   * @param bucketName The name of the bucket to get
+   * @throws GalaxyFDSClientException
+   */
+  public void getBucket(String bucketName) throws GalaxyFDSClientException;
+
+  /**
    * Checks if the specified bucket exists.
    *
    * @param bucketName The name of the bucket to check
@@ -135,11 +142,23 @@ public interface GalaxyFDS {
    * @param bucketName The name of the bucket to list
    * @param prefix     An optional parameter restricting the response to keys
    *                   beginning with the specified prefix.
-   * @param delimeter  delimeter to seperate path
+   * @param delimiter  delimiter to separate path
    * @return A listing of the objects in the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectListing listObjects(String bucketName, String prefix, String delimeter)
+  public FDSObjectListing listObjects(String bucketName, String prefix,
+      String delimiter) throws GalaxyFDSClientException;
+
+  /**
+   * Returns a list of summary information about the objects in the trash.
+   * @param prefix An optional parameter restricting the response to keys
+   *               beginning with the specified prefix. It is a prefix
+   *               of bucketName/objectName.
+   * @param delimiter delimiter to separate path
+   * @return
+   * @throws GalaxyFDSClientException
+   */
+  public FDSObjectListing listTrashObjects(String prefix, String delimiter)
       throws GalaxyFDSClientException;
 
   /**
@@ -293,6 +312,16 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   public void deleteObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Restore the object from trash.
+   *
+   * @param bucketName The name of the bucket where the object stores
+   * @param objectName The name of the object to restore
+   * @throws GalaxyFDSClientException
+   */
+  public void restoreObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -455,6 +484,23 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
+   * Returns a pre-signed URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName   The name of the bucket containing the desired object
+   * @param objectName   The name of the desired object
+   * @param subResources The subresource list of this request
+   * @param expiration   The time at which the returned pre-signed URL will expire
+   * @param httpMethod   The HTTP method verb to use for this URL
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedUri(String bucketName, String objectName,
+      List<String> subResources, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException;
+
+  /**
    * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
    *
    * @param bucketName  The name of the bucket containing the desired object
@@ -467,7 +513,24 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresigneCdndUri(String bucketName, String objectName,
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
       SubResource subResource, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException;
+
+    /**
+   * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName   The name of the bucket containing the desired object
+   * @param objectName   The name of the desired object
+   * @param subResources The subresource list of this request
+   * @param expiration   The time at which the returned pre-signed URL will expire
+   * @param httpMethod   The HTTP method verb to use for this URL
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
+      List<String> subResources, Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
 }

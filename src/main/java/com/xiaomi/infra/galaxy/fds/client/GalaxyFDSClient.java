@@ -35,7 +35,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.glassfish.jersey.client.ClientConfig;
 
+import com.xiaomi.infra.galaxy.exception.GalaxyException;
 import com.xiaomi.infra.galaxy.fds.Action;
+import com.xiaomi.infra.galaxy.fds.Constants;
 import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.auth.Common;
 import com.xiaomi.infra.galaxy.fds.auth.HttpMethod;
@@ -194,6 +196,26 @@ public class GalaxyFDSClient implements GalaxyFDS {
 
     if (response.getStatus() != Response.Status.OK.getStatusCode()) {
       String errorMsg = "Delete bucket failed, status=" + response.getStatus() +
+          ", reason=" + response.readEntity(String.class);
+      LOG.error(errorMsg);
+      throw new GalaxyFDSClientException(errorMsg);
+    }
+  }
+
+  @Override
+  public void getBucket(String bucketName) throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
+    MultivaluedMap<String, Object> headers = prepareRequestHeader(
+        uri, HttpMethod.GET, null, null);
+    Response response = client.target(uri).request()
+        .headers(headers)
+        .buildGet()
+        .property(Common.ACTION, Action.GetBucketMeta)
+        .property(Common.METRICS_COLLECTOR, metricsCollector)
+        .invoke();
+
+    if (response.getStatus() != Status.OK.getStatusCode()) {
+      String errorMsg = "Get bucket failed, status=" + response.getStatus() +
           ", reason=" + response.readEntity(String.class);
       LOG.error(errorMsg);
       throw new GalaxyFDSClientException(errorMsg);
@@ -371,6 +393,12 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
+  public FDSObjectListing listTrashObjects(String prefix, String delimiter)
+      throws GalaxyFDSClientException {
+    return listObjects(Constants.TRASH_BUCKET_NAME, prefix, delimiter);
+  }
+
+  @Override
   public FDSObjectListing listNextBatchOfObjects(
       FDSObjectListing previousObjectListing) throws GalaxyFDSClientException {
     if (!previousObjectListing.isTruncated()) {
@@ -381,6 +409,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
 
     String bucketName = previousObjectListing.getBucketName();
     String prefix = previousObjectListing.getPrefix();
+    String delimiter = previousObjectListing.getDelimiter();
     String marker = previousObjectListing.getNextMarker();
     int maxKeys = previousObjectListing.getMaxKeys();
 
@@ -390,6 +419,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
 
     Response response = client.target(uri.toString())
         .queryParam("prefix", prefix)
+        .queryParam("delimiter", delimiter)
         .queryParam("marker", marker)
         .queryParam("maxKeys", maxKeys)
         .request()
@@ -742,6 +772,32 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
+  public void restoreObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName + "/" + objectName,
+        (SubResource[]) null);
+    MultivaluedMap<String, Object> headers = prepareRequestHeader(
+        uri, HttpMethod.PUT, MediaType.APPLICATION_JSON, null);
+
+    Response response = client.target(uri)
+        .queryParam("restore", "")
+        .request()
+        .headers(headers)
+        .buildPut(Entity.entity("", MediaType.APPLICATION_JSON_TYPE))
+        .property(Common.ACTION, Action.RestoreObject)
+        .property(Common.METRICS_COLLECTOR, metricsCollector)
+        .invoke();
+
+    if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+      String errorMsg = "Restore object " + objectName + " under bucket "
+          + bucketName + " failed, status=" + response.getStatus()
+          + ", reason=" + response.readEntity(String.class);
+      LOG.error(errorMsg);
+      throw new GalaxyFDSClientException(errorMsg);
+    }
+  }
+
+  @Override
   public void renameObject(String bucketName, String srcObjectName,
       String dstObjectName) throws GalaxyFDSClientException {
     MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM_TYPE;
@@ -772,7 +828,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
       throws GalaxyFDSClientException {
     MediaType mediaType = MediaType.APPLICATION_JSON_TYPE;
     URI uri = formatUri(fdsConfig.getBaseUri(), bucketName + "/" + objectName,
-        (SubResource[])null);
+        (SubResource[]) null);
     MultivaluedMap<String, Object> headers = prepareRequestHeader(uri,
         HttpMethod.PUT, mediaType.toString(), null);
 
@@ -798,7 +854,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
       throws GalaxyFDSClientException {
     MediaType mediaType = MediaType.APPLICATION_JSON_TYPE;
     URI uri = formatUri(fdsConfig.getBaseUri(), bucketName + "/" + objectName,
-        (SubResource[])null);
+        (SubResource[]) null);
     MultivaluedMap<String, Object> headers = prepareRequestHeader(uri,
         HttpMethod.PUT, mediaType.toString(), null);
 
@@ -876,7 +932,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
   @Override
   public void deleteDomainMapping(String bucketName, String domainName)
       throws GalaxyFDSClientException {
-    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[])null);
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
     MultivaluedMap<String, Object> headers = prepareRequestHeader(uri,
         HttpMethod.DELETE, null, null);
 
@@ -939,31 +995,72 @@ public class GalaxyFDSClient implements GalaxyFDS {
   @Override
   public URI generatePresignedUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
-    return generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
-        null, expiration, httpMethod);
+    try {
+      return Signer.generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
+          null, expiration, httpMethod, credential.getGalaxyAccessId(),
+          credential.getGalaxyAccessSecret(), SIGN_ALGORITHM);
+    } catch (GalaxyException e) {
+      throw new GalaxyFDSClientException(e);
+    }
   }
 
   @Override
   public URI generatePresignedCdnUri(String bucketName, String objectName,
       Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException {
-    return generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
-        objectName, null, expiration, httpMethod);
+    try {
+      return Signer.generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
+          objectName, null, expiration, httpMethod, credential.getGalaxyAccessId(),
+          credential.getGalaxyAccessSecret(), SIGN_ALGORITHM);
+    } catch (GalaxyException e) {
+      throw new GalaxyFDSClientException(e);
+    }
   }
 
   @Override
   public URI generatePresignedUri(String bucketName, String objectName,
       SubResource subResource, Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException {
-    return generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
-        subResource, expiration, httpMethod);
+    List<String> subResources = new ArrayList<String>();
+    subResources.add(subResource.getName());
+    return generatePresignedUri(bucketName, objectName, subResources,
+        expiration, httpMethod);
   }
 
   @Override
-  public URI generatePresigneCdndUri(String bucketName, String objectName,
+  public URI generatePresignedUri(String bucketName, String objectName,
+      List<String> subResources, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException {
+    try {
+      return Signer.generatePresignedUri(fdsConfig.getBaseUri(), bucketName, objectName,
+          subResources, expiration, httpMethod, credential.getGalaxyAccessId(),
+          credential.getGalaxyAccessSecret(), SIGN_ALGORITHM);
+    } catch (GalaxyException e) {
+      throw new GalaxyFDSClientException(e);
+    }
+  }
+
+  @Override
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
       SubResource subResource, Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException {
-    return generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
-        objectName, subResource, expiration, httpMethod);
+    List<String> subResources = new ArrayList<String>();
+    subResources.add(subResource.getName());
+    return generatePresignedCdnUri(bucketName, objectName, subResources,
+        expiration, httpMethod);
+  }
+
+  @Override
+  public URI generatePresignedCdnUri(String bucketName, String objectName,
+      List<String> subResources, Date expiration, HttpMethod httpMethod)
+      throws GalaxyFDSClientException {
+    try {
+      return Signer.generatePresignedUri(fdsConfig.getCdnBaseUri(), bucketName,
+          objectName, subResources, expiration, httpMethod,
+          credential.getGalaxyAccessId(), credential.getGalaxyAccessSecret(),
+          SIGN_ALGORITHM);
+    } catch (GalaxyException e) {
+      throw new GalaxyFDSClientException(e);
+    }
   }
 
   /**
@@ -992,42 +1089,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
           + response.getStatus() + ", reason=" + response.readEntity(String.class);
       LOG.error(errorMsg);
       throw new GalaxyFDSClientException(errorMsg);
-    }
-  }
-
-  private URI generatePresignedUri(String baseUri, String bucketName,
-      String objectName, SubResource subResource, Date expiration,
-      HttpMethod httpMethod) throws GalaxyFDSClientException {
-    try {
-      URI uri = new URI(baseUri);
-      URI encodedUri;
-      if (subResource == null) {
-        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
-            uri.getPort(), "/" + bucketName + "/" + objectName,
-            Common.GALAXY_ACCESS_KEY_ID + "=" + credential.getGalaxyAccessId()
-                + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
-      } else {
-        encodedUri = new URI(uri.getScheme(), null, uri.getHost(),
-            uri.getPort(), "/" + bucketName + "/" + objectName,
-            subResource.getName() + "&" +
-            Common.GALAXY_ACCESS_KEY_ID + "=" + credential.getGalaxyAccessId()
-            + "&" + Common.EXPIRES + "=" + expiration.getTime(), null);
-      }
-
-      byte[] signature = Signer.signToBase64(httpMethod, encodedUri, null,
-          credential.getGalaxyAccessSecret(), SIGN_ALGORITHM);
-      return new URI(encodedUri.toString() + "&" + Common.SIGNATURE + "="
-          + new String(signature));
-    } catch (URISyntaxException e) {
-      LOG.error("Invalid URI syntax", e);
-      throw new GalaxyFDSClientException("Invalid URI syntax", e);
-    } catch (InvalidKeyException e) {
-      LOG.error("Invalid secret key spec", e);
-      throw new GalaxyFDSClientException("Invalid secret key spec", e);
-    } catch (NoSuchAlgorithmException e) {
-      LOG.error("Unsupported signature algorithm:" + SIGN_ALGORITHM, e);
-      throw new GalaxyFDSClientException("Unsupported signature algorithm:"
-          + SIGN_ALGORITHM, e);
     }
   }
 
@@ -1149,6 +1210,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
       listing = new FDSObjectListing();
       listing.setBucketName(result.getName());
       listing.setPrefix(result.getPrefix());
+      listing.setDelimiter(result.getDelimiter());
       listing.setMarker(result.getMarker());
       listing.setNextMarker(result.getNextMarker());
       listing.setMaxKeys(result.getMaxKeys());

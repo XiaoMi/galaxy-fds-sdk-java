@@ -12,6 +12,7 @@ public class FDSObjectListing {
 
   private String bucketName;
   private String prefix;
+  private String delimiter;
   private String marker;
   private String nextMarker;
   private int maxKeys;
@@ -34,6 +35,14 @@ public class FDSObjectListing {
 
   public void setPrefix(String prefix) {
     this.prefix = prefix;
+  }
+
+  public String getDelimiter() {
+    return delimiter;
+  }
+
+  public void setDelimiter(String delimiter) {
+    this.delimiter = delimiter;
   }
 
   public String getMarker() {
