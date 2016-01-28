@@ -12,6 +12,21 @@ public class FDSClientConfiguration {
   private static final String URI_FDS_SUFFIX = ".fds.api.xiaomi.com/";
   private static final String URI_FDS_SSL_SUFFIX = ".fds-ssl.api.xiaomi.com/";
 
+  /**
+   * The default timeout for a connected socket.
+   */
+  public static final int DEFAULT_SOCKET_TIMEOUT_MS = 50 * 1000;
+
+  /**
+   * The default timeout for establishing a connection.
+   */
+  public static final int DEFAULT_CONNECTION_TIMEOUT_MS = 50 * 1000;
+
+  /**
+   * max connections a client can have at same time
+   */
+  private static final int DEFAULT_MAX_CONNECTIONS = 20;
+
   private String regionName;
   private boolean enableHttps;
   private boolean enableCdnForUpload;
@@ -22,6 +37,10 @@ public class FDSClientConfiguration {
   private String baseUriForUnitTest;
 
   private boolean enableMetrics;
+  private boolean enableApacheConnector;
+  private int connectionTimeoutMs = DEFAULT_CONNECTION_TIMEOUT_MS;
+  private int socketTimeoutMs = DEFAULT_SOCKET_TIMEOUT_MS;
+  private int maxConnection = DEFAULT_MAX_CONNECTIONS;
 
   public FDSClientConfiguration() {
     enableHttps = true;
@@ -34,6 +53,7 @@ public class FDSClientConfiguration {
     baseUriForUnitTest = "";
 
     enableMetrics = false;
+    enableApacheConnector = false;
   }
 
   public String getRegionName() {
@@ -81,6 +101,14 @@ public class FDSClientConfiguration {
 
   public void disableMetrics() {
     enableMetrics = false;
+  }
+
+  public boolean isApacheConnectorEnabled() {
+    return enableApacheConnector;
+  }
+
+  public void enableApacheConnector(boolean enableApacheConnector) {
+    this.enableApacheConnector = enableApacheConnector;
   }
 
   public boolean isMetricsEnabled() {
@@ -147,5 +175,92 @@ public class FDSClientConfiguration {
       return URI_FDS_SSL_SUFFIX;
     }
     return URI_FDS_SUFFIX;
+  }
+
+  /**
+   * Returns the amount of time to wait (in milliseconds) when initially
+   * establishing a connection before giving up and timing out. A value of 0
+   * means infinity, and is not recommended.
+   *
+   * @return The amount of time to wait (in milliseconds) when initially
+   * establishing a connection before giving up and timing out.
+   */
+  public int getConnectionTimeoutMs() {
+    return connectionTimeoutMs;
+  }
+
+  /**
+   * Sets the amount of time to wait (in milliseconds) when initially
+   * establishing a connection before giving up and timing out. A value of 0
+   * means infinity, and is not recommended.
+   *
+   * @param connectionTimeoutMs The amount of time to wait (in milliseconds) when
+   *                          initially establishing a connection before giving
+   *                          up and timing out.
+   */
+  public void setConnectionTimeoutMs(int connectionTimeoutMs) {
+    this.connectionTimeoutMs = connectionTimeoutMs;
+  }
+
+  /**
+   * Sets the amount of time to wait (in milliseconds) when initially
+   * establishing a connection before giving up and timing out, and returns
+   * the updated FDSClientConfiguration object so that additional method calls
+   * may be chained together.
+   *
+   * @param connectionTimeout the amount of time to wait (in milliseconds) when initially
+   *                          establishing a connection before giving up and timing out.
+   * @return The updated FDSClientConfiguration object.
+   */
+  public FDSClientConfiguration withConnectionTimeoutMs(int connectionTimeout) {
+    setConnectionTimeoutMs(connectionTimeout);
+    return this;
+  }
+
+  /**
+   * Returns the amount of time to wait (in milliseconds) for data to be
+   * transferred over an established, open connection before the connection
+   * times out and is closed. A value of 0 means infinity, and isn't
+   * recommended.
+   *
+   * @return The amount of time to wait (in milliseconds) for data to be
+   * transferred over an established, open connection before the
+   * connection times out and is closed.
+   */
+  public int getSocketTimeoutMs() {
+    return socketTimeoutMs;
+  }
+
+  /**
+   * Sets the amount of time to wait (in milliseconds) for data to be
+   * transferred over an established, open connection before the connection
+   * times out and is closed. A value of 0 means infinity, and isn't recommended.
+   *
+   * @param socketTimeoutMs The amount of time to wait (in milliseconds) for data
+   *                      to be transfered over an established, open connection
+   *                      before the connection is times out and is closed.
+   */
+  public void setSocketTimeoutMs(int socketTimeoutMs) {
+    this.socketTimeoutMs = socketTimeoutMs;
+  }
+
+  /**
+   * Sets the amount of time to wait (in milliseconds) for data to be
+   * transferred over an established, open connection before the connection
+   * times out and is closed, and returns the updated FDSClientConfiguration
+   * object so that additional method calls may be chained together.
+   *
+   * @param socketTimeout The amount of time to wait (in milliseconds) for data
+   *                      to be transfered over an established, open connection
+   *                      before the connection is times out and is closed.
+   * @return The updated FDSClientConfiguration object.
+   */
+  public FDSClientConfiguration withSocketTimeoutMs(int socketTimeout) {
+    setSocketTimeoutMs(socketTimeout);
+    return this;
+  }
+
+  public int getMaxConnection() {
+    return maxConnection;
   }
 }

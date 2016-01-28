@@ -3,7 +3,7 @@ package com.xiaomi.infra.galaxy.fds.client.model;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.ws.rs.core.Response;
+import org.apache.http.HttpEntity;
 
 /**
  * Input stream representing the content of an FDSObject. In addition to the
@@ -12,12 +12,12 @@ import javax.ws.rs.core.Response;
  */
 public class FDSObjectInputStream extends InputStream {
 
-  private final Response response;
+  private final HttpEntity httpEntity;
   private final InputStream wrappedStream;
 
-  public FDSObjectInputStream(Response response) {
-    this.response = response;
-    this.wrappedStream = response.readEntity(InputStream.class);
+  public FDSObjectInputStream(HttpEntity httpEntity) throws IOException {
+    this.httpEntity = httpEntity;
+    this.wrappedStream = httpEntity.getContent();
   }
 
   @Override
@@ -38,6 +38,5 @@ public class FDSObjectInputStream extends InputStream {
   @Override
   public void close() throws IOException {
     this.wrappedStream.close();
-    this.response.close();
   }
 }

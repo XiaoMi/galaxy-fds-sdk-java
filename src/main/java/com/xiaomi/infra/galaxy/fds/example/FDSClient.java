@@ -9,15 +9,15 @@ import com.xiaomi.infra.galaxy.fds.client.GalaxyFDS;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDSClient;
 import com.xiaomi.infra.galaxy.fds.client.credential.BasicFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.credential.GalaxyFDSCredential;
+import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectInputStream;
-import com.xiaomi.infra.galaxy.fds.exception.GalaxyFDSClientException;
 
 public class FDSClient {
 
-  private static final String APP_ACCESS_KEY = "your_access_key";
-  private static final String APP_ACCESS_SECRET = "your_access_secret";
+  private static final String APP_ACCESS_KEY = "APP_ACCESS_KEY";
+  private static final String APP_ACCESS_SECRET = "APP_ACCESS_SECRET";
 
   private static final String BUCKET_NAME = "java-sdk-example";
   private static final String OBJECT_NAME = "test.txt";

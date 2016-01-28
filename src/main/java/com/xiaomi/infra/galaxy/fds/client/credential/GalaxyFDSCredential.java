@@ -4,7 +4,7 @@ package com.xiaomi.infra.galaxy.fds.client.credential;
 // with Galaxy SDS
 public interface GalaxyFDSCredential {
 
-  public String getGalaxyAccessId();
+  String getGalaxyAccessId();
 
-  public String getGalaxyAccessSecret();
+  String getGalaxyAccessSecret();
 }

@@ -5,17 +5,21 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
-import com.xiaomi.infra.galaxy.fds.SubResource;
-import com.xiaomi.infra.galaxy.fds.auth.HttpMethod;
+import com.xiaomi.infra.galaxy.fds.client.model.HttpMethod;
+import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
+import com.xiaomi.infra.galaxy.fds.client.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
-import com.xiaomi.infra.galaxy.fds.exception.GalaxyFDSClientException;
-import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
-import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
-import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
-import com.xiaomi.infra.galaxy.fds.result.QuotaPolicy;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectMetadata;
+import com.xiaomi.infra.galaxy.fds.client.model.InitMultipartUploadResult;
+import com.xiaomi.infra.galaxy.fds.client.model.PutObjectResult;
+import com.xiaomi.infra.galaxy.fds.client.model.QuotaPolicy;
+import com.xiaomi.infra.galaxy.fds.client.model.SubResource;
+import com.xiaomi.infra.galaxy.fds.client.model.UploadPartResult;
+import com.xiaomi.infra.galaxy.fds.client.model.UploadPartResultList;
 
 public interface GalaxyFDS {
 
@@ -293,6 +297,16 @@ public interface GalaxyFDS {
       AccessControlList acl) throws GalaxyFDSClientException;
 
   /**
+   * Deletes the AccessControlList(ACL) of the specified fds object.
+   * @param bucketName The name of the bucket where the bucket stores
+   * @param objectName The name of the object to delete acl
+   * @param acl        The ACL to delete for the specified object
+   * @throws GalaxyFDSClientException
+   */
+  public void deleteObjectAcl(String bucketName, String objectName,
+      AccessControlList acl) throws GalaxyFDSClientException;
+
+  /**
    * Checks if the object with the specified name under the specified bucket
    * exists.
    *
@@ -312,6 +326,45 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   public void deleteObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Deletes objects with specified prefix under specified bucket.
+   *
+   * @param bucketName The name of the bucket where the objects store
+   * @param prefix     An optional parameter restricting the response to keys
+   *                    beginning with the specified prefix.
+   * @throws GalaxyFDSClientException
+   * @return list of failed deletion:
+   * [
+   *   {
+   *     "object_name": "$OBJECT_NAME",
+   *     "error_code": $ERROR_CODE,
+   *     "error_description": "$ERROR_MESSAGE"
+   *   }
+   *   ,...
+   * ]
+   */
+  public List<Map<String, Object>> deleteObjects(String bucketName, String prefix)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Deletes the objects with the specified name under the specified bucket,
+   * length of objectNameList limit to 1k
+   * @param bucketName     The name of the bucket where the objects store
+   * @param objectNameList The list of names of the object to delete
+   * @throws GalaxyFDSClientException
+   * @return list of failed deletion:
+   * [
+   *   {
+   *     "object_name": "$OBJECT_NAME",
+   *     "error_code": $ERROR_CODE,
+   *     "error_description": "$ERROR_MESSAGE"
+   *   }
+   *   ,...
+   * ]
+   */
+  public List<Map<String, Object>> deleteObjects(String bucketName, List<String> objectNameList)
       throws GalaxyFDSClientException;
 
   /**
@@ -376,6 +429,10 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   public void deleteDomainMapping(String bucketName, String domainName)
+      throws GalaxyFDSClientException;
+
+
+  public void cropImage(String bucketName, String objectName, int x, int y, int w, int h)
       throws GalaxyFDSClientException;
 
   /**
@@ -533,4 +590,52 @@ public interface GalaxyFDS {
   public URI generatePresignedCdnUri(String bucketName, String objectName,
       List<String> subResources, Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
+
+  /**
+   * Init a multipart upload session
+   * @param bucketName
+   * @param objectName
+   * @return A InitMultipartUploadResult which contains uploadId.
+   * @throws GalaxyFDSClientException
+   */
+  public InitMultipartUploadResult initMultipartUpload(String bucketName,
+      String objectName) throws GalaxyFDSClientException;
+
+  /**
+   * Upload a part
+   * @param bucketName
+   * @param objectName
+   * @param uploadId
+   * @param partNumber The part number of this part.
+   * @param in
+   * @return A UploadPartResult which contains the part's ETag.
+   * @throws GalaxyFDSClientException
+   */
+  public UploadPartResult uploadPart(String bucketName, String objectName,
+      String uploadId, int partNumber, InputStream in)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Complete the multipart upload.
+   * @param bucketName
+   * @param objectName
+   * @param uploadId
+   * @param metadata
+   * @param uploadPartResultList The UploadPartResult list contains UploadPartResult
+   *                             returned by uploadPart.
+   * @return A PutObjectResult which is the same as the one returned by putObject.
+   */
+  public PutObjectResult completeMultipartUpload(String bucketName,
+      String objectName, String uploadId, FDSObjectMetadata metadata,
+      UploadPartResultList uploadPartResultList) throws GalaxyFDSClientException;
+
+  /**
+   * Abort the multipart upload session.
+   * @param bucketName
+   * @param objectName
+   * @param uploadId
+   * @throws GalaxyFDSClientException
+   */
+  public void abortMultipartUpload(String bucketName, String objectName,
+      String uploadId) throws GalaxyFDSClientException;
 }

@@ -1,12 +1,19 @@
-package com.xiaomi.infra.galaxy.fds.client.model;
+package com.xiaomi.infra.galaxy.fds.client.bean;
 
-public class Owner {
+public class OwnerBean {
+
   private String id;
   private String displayName;
 
-  public Owner(String id, String displayName) {
+  public OwnerBean() {}
+
+  public OwnerBean(String id) {
     this.id = id;
-    this.displayName = displayName;
+  }
+
+  public OwnerBean(String id, String displayName) {
+    this.id = id;
+    this.setDisplayName(displayName);
   }
 
   public String getId() {

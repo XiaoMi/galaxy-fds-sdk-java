@@ -1,26 +1,23 @@
 package com.xiaomi.infra.galaxy.fds.client.filter;
 
 import java.io.IOException;
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
 
-import com.xiaomi.infra.galaxy.fds.Action;
-import com.xiaomi.infra.galaxy.fds.auth.Common;
+import org.apache.http.protocol.HttpContext;
+
+import com.xiaomi.infra.galaxy.fds.client.model.Action;
+import com.xiaomi.infra.galaxy.fds.client.auth.Common;
 import com.xiaomi.infra.galaxy.fds.client.metrics.RequestMetrics;
-import com.xiaomi.infra.galaxy.fds.model.ClientMetrics;
+import com.xiaomi.infra.galaxy.fds.client.metrics.ClientMetrics;
 
 /**
  * Created by zhangjunbin on 3/17/15.
  */
-public class MetricsRequestFilter implements ClientRequestFilter {
-  @Override
-  public void filter(ClientRequestContext requestContext) throws IOException {
+public class MetricsRequestFilter {
+  public void filter(HttpContext context) throws IOException {
     RequestMetrics requestMetrics = new RequestMetrics();
-    requestMetrics.setRequestTypeName((Action)requestContext.getProperty(
-        Common.ACTION));
+    requestMetrics.setRequestTypeName((Action)context.getAttribute(Common.ACTION));
     requestMetrics.startEvent(ClientMetrics.LatencyMetricType.ExecutionTime);
-    requestContext.setProperty(Common.REQUEST_METRICS,
-        requestMetrics);
+    context.setAttribute(Common.REQUEST_METRICS, requestMetrics);
   }
 }
 
