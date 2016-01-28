@@ -7,29 +7,26 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.xiaomi.infra.galaxy.fds.Action;
-import com.xiaomi.infra.galaxy.fds.model.ClientMetrics;
-import com.xiaomi.infra.galaxy.fds.model.ClientMetrics.LatencyMetricType;
-import com.xiaomi.infra.galaxy.fds.model.MetricData;
+import com.xiaomi.infra.galaxy.fds.client.model.Action;
 
 public class RequestMetrics {
 
   private static final Log LOG = LogFactory.getLog(RequestMetrics.class);
 
   private Action action;
-  private Map<LatencyMetricType, TimingInfo> latencyMetrics
-      = new HashMap<LatencyMetricType, TimingInfo>();
+  private Map<ClientMetrics.LatencyMetricType, TimingInfo> latencyMetrics
+      = new HashMap<ClientMetrics.LatencyMetricType, TimingInfo>();
 
   public void setRequestTypeName(Action action) {
     this.action = action;
   }
 
-  public void startEvent(LatencyMetricType metricType) {
+  public void startEvent(ClientMetrics.LatencyMetricType metricType) {
     TimingInfo timingInfo = new TimingInfo(System.currentTimeMillis(), null);
     latencyMetrics.put(metricType, timingInfo);
   }
 
-  public void endEvent(LatencyMetricType metricType) {
+  public void endEvent(ClientMetrics.LatencyMetricType metricType) {
     TimingInfo timingInfo = latencyMetrics.get(metricType);
     if (timingInfo == null) {
       LOG.warn("Try to end event which wasn't started.");
@@ -41,7 +38,7 @@ public class RequestMetrics {
   public ClientMetrics toClientMetrics() {
     ClientMetrics clientMetrics = new ClientMetrics();
 
-    for (Map.Entry<LatencyMetricType, TimingInfo> entry
+    for (Map.Entry<ClientMetrics.LatencyMetricType, TimingInfo> entry
         : latencyMetrics.entrySet()) {
       TimingInfo timingInfo = entry.getValue();
       Preconditions.checkNotNull(timingInfo.getStartTimeMilli());

@@ -8,8 +8,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDSClient;
-import com.xiaomi.infra.galaxy.fds.model.ClientMetrics;
-import com.xiaomi.infra.galaxy.fds.model.MetricData;
 
 
 /**
