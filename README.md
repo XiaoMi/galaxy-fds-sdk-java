@@ -17,7 +17,7 @@ github link: [https://github.com/XiaoMi/galaxy-fds-sdk-java.git]()
     <dependency>
       	<groupId>com.xiaomi.infra.galaxy</groupId>
     		<artifactId>galaxy-fds-sdk-java</artifactId>
-    		<version>1.5.0</version>
+    		<version>2.0.0</version>
     </dependency>
 ```
 
