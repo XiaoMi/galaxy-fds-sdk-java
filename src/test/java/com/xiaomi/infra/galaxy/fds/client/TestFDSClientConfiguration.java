@@ -8,13 +8,10 @@ import org.junit.Test;
  */
 public class TestFDSClientConfiguration {
 
-  private final String URI_FDS_SUFFIX = ".fds.api.xiaomi.com/";
-  private final String URI_FDS_SSL_SUFFIX = ".fds-ssl.api.xiaomi.com/";
-
   @Test
   public void testDefaultConfigurationValue() {
     FDSClientConfiguration conf = new FDSClientConfiguration();
-    Assert.assertEquals("", conf.getRegionName());
+    Assert.assertEquals("cnbj0", conf.getRegionName());
     Assert.assertEquals(true, conf.isHttpsEnabled());
     Assert.assertEquals(false, conf.isCdnEnabledForUpload());
     Assert.assertEquals(true, conf.isCdnEnabledForDownload());
@@ -24,30 +21,25 @@ public class TestFDSClientConfiguration {
   @Test
   public void testCdnChosen() {
     FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
-    fdsConfig.setRegionName("");
+    String regionName = "regionName";
+    fdsConfig.setRegionName(regionName);
     fdsConfig.enableHttps(true);
 
     // Test flag enableCdnForUpload.
-    fdsConfig.enableCdnForUpload(false);
-    Assert.assertEquals(fdsConfig.getUploadBaseUri(),
-        "https://files" + URI_FDS_SUFFIX);
     fdsConfig.enableCdnForUpload(true);
     Assert.assertEquals(fdsConfig.getUploadBaseUri(),
-        "https://cdn" + URI_FDS_SSL_SUFFIX);
-    fdsConfig.enableHttps(false);
+        "https://cdn." + regionName + ".fds.api.mi-img.com");
+    fdsConfig.enableCdnForUpload(false);
     Assert.assertEquals(fdsConfig.getUploadBaseUri(),
-        "http://cdn" + URI_FDS_SUFFIX);
+        "https://" + regionName + ".fds.api.xiaomi.com");
 
     // Test flag enableCdnForDownload.
-    fdsConfig.enableCdnForDownload(false);
-    Assert.assertEquals(fdsConfig.getDownloadBaseUri(),
-        "http://files" + URI_FDS_SUFFIX);
     fdsConfig.enableCdnForDownload(true);
     Assert.assertEquals(fdsConfig.getDownloadBaseUri(),
-        "http://cdn" + URI_FDS_SUFFIX);
-    fdsConfig.enableHttps(true);
+        "http://cdn." + regionName + ".fds.api.mi-img.com");
+    fdsConfig.enableCdnForDownload(false);
     Assert.assertEquals(fdsConfig.getDownloadBaseUri(),
-        "https://cdn" + URI_FDS_SSL_SUFFIX);
+        "http://" + regionName + ".fds.api.xiaomi.com");
   }
 
   @Test
@@ -56,22 +48,28 @@ public class TestFDSClientConfiguration {
     FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
 
     // Test against flag enable https.
-    fdsConfig.setRegionName("");
+    fdsConfig.setRegionName(regionName);
     fdsConfig.enableHttps(true);
-    Assert.assertEquals("https://files" + URI_FDS_SUFFIX,
+    Assert.assertEquals("https://" + regionName + ".fds.api.xiaomi.com/",
         fdsConfig.buildBaseUri(false));
     fdsConfig.enableHttps(false);
-    Assert.assertEquals("http://files" + URI_FDS_SUFFIX,
+    Assert.assertEquals("http://" + regionName + ".fds.api.xiaomi.com/",
         fdsConfig.buildBaseUri(false));
 
     // Test against region name.
     fdsConfig.setRegionName(regionName);
     fdsConfig.enableHttps(true);
-    Assert.assertEquals("https://" + regionName + "-files" + URI_FDS_SUFFIX,
+    Assert.assertEquals("https://" + regionName + ".fds.api.xiaomi.com/",
         fdsConfig.buildBaseUri(false));
 
-    fdsConfig.enableCdnForDownload(true);
-    Assert.assertEquals("https://" + regionName + "-cdn" + URI_FDS_SSL_SUFFIX,
+    Assert.assertEquals("https://cdn." + regionName + ".fds.api.mi-img.com/",
         fdsConfig.buildBaseUri(true));
+
+    String endpointName = "cnbj0.fds.api.xiaomi.com";
+    fdsConfig.setEndpoint(endpointName);
+    fdsConfig.enableHttps(true);
+    Assert.assertEquals("https://" + endpointName + "/", fdsConfig.buildBaseUri(false));
+    fdsConfig.enableHttps(false);
+    Assert.assertEquals("http://" + endpointName + "/", fdsConfig.buildBaseUri(false));
   }
 }

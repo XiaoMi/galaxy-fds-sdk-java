@@ -7,7 +7,8 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.xiaomi.infra.galaxy.fds.client.model.Action;
+import com.xiaomi.infra.galaxy.fds.Action;
+
 
 public class RequestMetrics {
 

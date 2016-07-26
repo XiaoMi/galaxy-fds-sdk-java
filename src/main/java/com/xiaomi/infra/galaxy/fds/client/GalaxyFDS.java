@@ -7,19 +7,19 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.xiaomi.infra.galaxy.fds.client.model.HttpMethod;
+import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
-import com.xiaomi.infra.galaxy.fds.client.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectMetadata;
-import com.xiaomi.infra.galaxy.fds.client.model.InitMultipartUploadResult;
-import com.xiaomi.infra.galaxy.fds.client.model.PutObjectResult;
-import com.xiaomi.infra.galaxy.fds.client.model.QuotaPolicy;
-import com.xiaomi.infra.galaxy.fds.client.model.SubResource;
-import com.xiaomi.infra.galaxy.fds.client.model.UploadPartResult;
-import com.xiaomi.infra.galaxy.fds.client.model.UploadPartResultList;
+import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
+import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
+import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
+import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
+import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
+import com.xiaomi.infra.galaxy.fds.result.QuotaPolicy;
+import com.xiaomi.infra.galaxy.fds.result.UploadPartResult;
+import com.xiaomi.infra.galaxy.fds.result.UploadPartResultList;
 
 public interface GalaxyFDS {
 
@@ -34,12 +34,32 @@ public interface GalaxyFDS {
   public List<FDSBucket> listBuckets() throws GalaxyFDSClientException;
 
   /**
+   * Returns a list of all galaxy authorized fds buckets that the authenticated sender
+   * of the request owns.
+   *
+   * @return A list of all galaxy fds buckets owned by the authenticated sender
+   *         of the request
+   * @throws GalaxyFDSClientException
+   */
+  public List<FDSBucket> listAuthorizedBuckets() throws GalaxyFDSClientException;
+
+  /**
    * Creates a new fds bucket with the specified name.
    *
    * @param bucketName The name of the bucket to create
    * @throws GalaxyFDSClientException
    */
   public void createBucket(String bucketName) throws GalaxyFDSClientException;
+
+  /**
+   * Creates a new fds bucket with the specified name.
+   *
+   * @param org        The name of org
+   * @param bucketName The name of the bucket to create
+   * @throws GalaxyFDSClientException
+   */
+  public void createBucketUnderOrg(String org, String bucketName)
+      throws GalaxyFDSClientException;
 
   /**
    * Deletes a fds bucket with the specified name.
@@ -79,7 +99,7 @@ public interface GalaxyFDS {
   /**
    * Sets the AccessControlList(ACL) of the specified fds bucket.
    *
-   * @param bucketName The name of the bucket whoses acl is being set
+   * @param bucketName The name of the bucket whose acl is being set
    * @param acl        The new AccessControlList for the specified bucket
    * @throws GalaxyFDSClientException
    */
@@ -445,16 +465,6 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
-   * Set the object public to all users.
-   * @param bucketName The name of the bucket containing the desired object
-   * @param objectName The name of the desired object
-   * @param disablePrefetch Disable prefetch to CDN
-   * @throws GalaxyFDSClientException
-   */
-  public void setPublic(String bucketName, String objectName,
-      boolean disablePrefetch) throws GalaxyFDSClientException;
-
-  /**
    * Return a URI for downloading Galaxy FDS resource.
    *
    * @param bucketName the name of the bucket containing the desired object.
@@ -558,6 +568,25 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
+   * Returns a pre-signed URI for accessing Galaxy FDS resource.
+   *
+   * @param bucketName   The name of the bucket containing the desired object
+   * @param objectName   The name of the desired object
+   * @param subResources The subresource list of this request
+   * @param expiration   The time at which the returned pre-signed URL will expire
+   * @param httpMethod   The HTTP method verb to use for this URL
+   * @param contentType  The content type of this object
+   * @return A pre-signed URL which expires at the specified time, and can be
+   *         used to allow anyone to access the specified object from galaxy
+   *         fds, without exposing the owner's Galaxy secret access key.
+   * @throws GalaxyFDSClientException
+   */
+  public URI generatePresignedUri(String bucketName, String objectName,
+      List<String> subResources, Date expiration, HttpMethod httpMethod,
+      String contentType)
+      throws GalaxyFDSClientException;
+
+  /**
    * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
    *
    * @param bucketName  The name of the bucket containing the desired object
@@ -638,4 +667,5 @@ public interface GalaxyFDS {
    */
   public void abortMultipartUpload(String bucketName, String objectName,
       String uploadId) throws GalaxyFDSClientException;
+
 }

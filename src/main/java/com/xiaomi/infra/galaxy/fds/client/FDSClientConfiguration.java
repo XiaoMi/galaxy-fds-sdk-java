@@ -1,5 +1,8 @@
 package com.xiaomi.infra.galaxy.fds.client;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
 /**
  * Created by zhangjunbin on 12/23/14.
  */
@@ -7,10 +10,9 @@ public class FDSClientConfiguration {
 
   private static final String URI_HTTP_PREFIX = "http://";
   private static final String URI_HTTPS_PREFIX = "https://";
-  private static final String URI_FILES = "files";
   private static final String URI_CDN = "cdn";
-  private static final String URI_FDS_SUFFIX = ".fds.api.xiaomi.com/";
-  private static final String URI_FDS_SSL_SUFFIX = ".fds-ssl.api.xiaomi.com/";
+  private static final String URI_SUFFIX = "fds.api.xiaomi.com";
+  private static final String URI_CDN_SUFFIX = "fds.api.mi-img.com";
 
   /**
    * The default timeout for a connected socket.
@@ -27,7 +29,14 @@ public class FDSClientConfiguration {
    */
   private static final int DEFAULT_MAX_CONNECTIONS = 20;
 
+
+  /**
+   * max batch deletion size, used in batch delete
+   */
+  public static final int DEFAULT_MAX_BATCH_DELETE_SIZE = 1000;
+
   private String regionName;
+  private String endpoint;
   private boolean enableHttps;
   private boolean enableCdnForUpload;
   private boolean enableCdnForDownload;
@@ -41,10 +50,11 @@ public class FDSClientConfiguration {
   private int connectionTimeoutMs = DEFAULT_CONNECTION_TIMEOUT_MS;
   private int socketTimeoutMs = DEFAULT_SOCKET_TIMEOUT_MS;
   private int maxConnection = DEFAULT_MAX_CONNECTIONS;
+  private int batchDeleteSize = DEFAULT_MAX_BATCH_DELETE_SIZE;
 
   public FDSClientConfiguration() {
     enableHttps = true;
-    regionName = "";
+    regionName = "cnbj0";
     enableCdnForUpload = false;
     enableCdnForDownload = true;
     enableMd5Calculate = false;
@@ -62,6 +72,14 @@ public class FDSClientConfiguration {
 
   public void setRegionName(String regionName) {
     this.regionName = regionName;
+  }
+
+  public String getEndpoint() {
+    return endpoint;
+  }
+
+  public void setEndpoint(String endpoint) {
+    this.endpoint = endpoint;
   }
 
   public boolean isHttpsEnabled() {
@@ -150,31 +168,15 @@ public class FDSClientConfiguration {
 
     StringBuilder sb = new StringBuilder();
     sb.append(enableHttps ? URI_HTTPS_PREFIX : URI_HTTP_PREFIX);
-    sb.append(getBaseUriPrefix(enableCdn, regionName));
-    sb.append(getBaseUriSuffix(enableCdn, enableHttps));
-    return sb.toString();
-  }
-
-  private String getBaseUriPrefix(boolean enableCdn, String regionName) {
-    if (regionName.isEmpty()) {
-      if (enableCdn) {
-        return URI_CDN;
-      }
-      return URI_FILES;
+    if (!Strings.isNullOrEmpty(this.endpoint)) {
+      sb.append(this.endpoint);
+    } else if (enableCdn) {
+      sb.append(URI_CDN + "." + regionName + "." + URI_CDN_SUFFIX);
     } else {
-      if (enableCdn) {
-        return regionName + "-" + URI_CDN;
-      } else {
-        return regionName + "-" + URI_FILES;
-      }
+      sb.append(regionName + "." + URI_SUFFIX);
     }
-  }
-
-  private String getBaseUriSuffix(boolean enableCdn, boolean enableHttps) {
-    if (enableCdn && enableHttps) {
-      return URI_FDS_SSL_SUFFIX;
-    }
-    return URI_FDS_SUFFIX;
+    sb.append("/");
+    return sb.toString();
   }
 
   /**
@@ -262,5 +264,26 @@ public class FDSClientConfiguration {
 
   public int getMaxConnection() {
     return maxConnection;
+  }
+
+  /**
+   * Set items deleted each round in deleteObjects, if more than
+   * $size object left, deleteObjects will delete them in several
+   * rounds internally.
+   * @param size positive and greater than DEFAULT_MAX_BATCH_DELETE_SIZE,
+   */
+  public void setMaxBatchDeleteSize(int size) {
+    Preconditions.checkArgument(size > 0, "size should be positive, got" + size);
+    Preconditions.checkArgument(size <= DEFAULT_MAX_BATCH_DELETE_SIZE,
+        "size should <= " + DEFAULT_MAX_BATCH_DELETE_SIZE + " got " + size);
+    this.batchDeleteSize = size;
+  }
+
+  /**
+   * get items deleted each round in deleteObjects
+   * @return
+   */
+  public int getMaxBatchDeleteSize() {
+    return this.batchDeleteSize;
   }
 }

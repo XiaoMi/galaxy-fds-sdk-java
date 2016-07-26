@@ -4,11 +4,10 @@ import java.io.IOException;
 
 import org.apache.http.protocol.HttpContext;
 
-import com.xiaomi.infra.galaxy.fds.client.auth.Common;
+import com.xiaomi.infra.galaxy.fds.Common;
 import com.xiaomi.infra.galaxy.fds.client.metrics.MetricsCollector;
 import com.xiaomi.infra.galaxy.fds.client.metrics.RequestMetrics;
 import com.xiaomi.infra.galaxy.fds.client.metrics.ClientMetrics;
-
 /**
  * Created by zhangjunbin on 3/17/15.
  */

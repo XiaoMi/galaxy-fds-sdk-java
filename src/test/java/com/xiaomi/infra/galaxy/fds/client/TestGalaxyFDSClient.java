@@ -13,31 +13,47 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLContext;
+
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContexts;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import org.apache.commons.io.IOUtils;
+import com.xiaomi.infra.galaxy.fds.Common;
+import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.client.credential.BasicFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.credential.GalaxyFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
-import com.xiaomi.infra.galaxy.fds.client.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectMetadata;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectSummary;
-import com.xiaomi.infra.galaxy.fds.client.model.HttpMethod;
-import com.xiaomi.infra.galaxy.fds.client.model.PutObjectResult;
-import com.xiaomi.infra.galaxy.fds.client.model.SubResource;
+import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
+import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
+import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
+import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -50,7 +66,7 @@ public class TestGalaxyFDSClient {
   private static final Log LOG = LogFactory.getLog(GalaxyFDSClient.class);
   private static final String accessId = "ACCESS_KEY";
   private static final String accessSecret = "ACCESS_SECRET";
-  private static final String accessIdAcl = "ACCESS_KEY_Acl";
+  private static final String accessIdAcl = "ACCESS_KEY_ACL";
   private static final String accessSecretAcl = "ACCESS_SECRET_ACL";
   private static final String bucketPrefix = TestGalaxyFDSClient.class.getSimpleName() +
       "-" + System.currentTimeMillis();
@@ -59,6 +75,7 @@ public class TestGalaxyFDSClient {
 
   private GalaxyFDSClient fdsClient;
   private GalaxyFDSClient fdsClientAcl;
+
   private String bucketName;
   private List<String> bucket2DeleteList;
 
@@ -249,12 +266,12 @@ public class TestGalaxyFDSClient {
 
   @Test(timeout = 120*1000)
   public void testDeleteObjectsWithNameList() throws Exception {
-    final int objectSize = 300;
+    final int objectSize = 30;
 
     List<String> objectNameList = prepareRandomObjects(bucketName, objectSize,
         bucketName + "_objects_/", bucketName + "lalala");
 
-    List<String> objectNameShouldnotDelete = prepareObjects(bucketName, 100,
+    List<String> objectNameShouldnotDelete = prepareObjects(bucketName, 10,
         bucketName + "_objects_/_", bucketName + "dadada");
 
     List<Map<String, Object>> failList = fdsClient.deleteObjects(bucketName, objectNameList);
@@ -268,12 +285,12 @@ public class TestGalaxyFDSClient {
         bucketName + "dadada");
 
     try {
-      for (; objectNameList.size() <= GalaxyFDSClient.MAX_BATCH_DELETE_SIZE;)
+      for (; objectNameList.size() <= FDSClientConfiguration.DEFAULT_MAX_BATCH_DELETE_SIZE;)
         objectNameList.addAll(objectNameShouldnotDelete);
       fdsClient.deleteObjects(bucketName, objectNameList);
       Assert.fail();
     } catch (Exception e) {
-      // objectNameList.size() > MAX_BATCH_DELETE_SIZE
+      // objectNameList.size() > DEFAULT_MAX_BATCH_DELETE_SIZE
     }
 
     objectNameList.clear();
@@ -281,29 +298,27 @@ public class TestGalaxyFDSClient {
     Assert.assertTrue(failList.isEmpty());
   }
 
-  // NOTE this test put and get lots of object
-  @Ignore
-  @Test(timeout = 300*1000)
+  @Test(timeout = 120*1000)
   public void testDelObjWithPrefix()
       throws GalaxyFDSClientException, IOException {
-    final int objectSize = 1235;
+    final int objectSize = 123;
 
     List<String> objectNameList = prepareRandomObjects(bucketName, objectSize,
         bucketName + "_objects_0/0/", bucketName + "dalalala");
-    objectNameList.addAll(prepareObjects(bucketName, 30,
+    objectNameList.addAll(prepareObjects(bucketName, 3,
         bucketName + "_objects_0/1/", bucketName + "dalalaTa"));
-    objectNameList.addAll(prepareObjects(bucketName, 20,
+    objectNameList.addAll(prepareObjects(bucketName, 2,
         bucketName + "_objects_0/0", bucketName + "dalalaTa"));
-    objectNameList.addAll(prepareObjects(bucketName, 10,
+    objectNameList.addAll(prepareObjects(bucketName, 1,
         bucketName + "_objects_0/1", bucketName + "dalalaTa"));
 
-    List<String> objectNameDeleteSecondTime = prepareObjects(bucketName, 100,
+    List<String> objectNameDeleteSecondTime = prepareObjects(bucketName, 10,
         bucketName + "_objects_1/0/", bucketName + "dalalaTa");
-    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 50,
+    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 5,
         bucketName + "_objects_1/1/", bucketName + "dalalaTa"));
-    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 20,
+    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 2,
         bucketName + "_objects_1/0", bucketName + "dalalaTa"));
-    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 10,
+    objectNameDeleteSecondTime.addAll(prepareObjects(bucketName, 1,
         bucketName + "_objects_1/1", bucketName + "dalalaTa"));
 
     List<Map<String, Object>> failList = fdsClient.deleteObjects(bucketName,
@@ -725,5 +740,23 @@ public class TestGalaxyFDSClient {
     Assert.assertNotNull(result);
     Assert.assertEquals(bucketName, result.getBucketName());
     Assert.assertNotNull(result.getSignature());
+  }
+
+  @Test(timeout = 120 * 1000)
+  public void testSetWriteWithSSO() throws Exception {
+    AccessControlList accessControlList = new AccessControlList();
+    AccessControlList.Grant grant = new AccessControlList.Grant(accessIdAcl,
+        AccessControlList.Permission.SSO_WRITE);
+    accessControlList.addGrant(grant);
+    fdsClient.setBucketAcl(bucketName, accessControlList);
+    AccessControlList accessControlListGot = fdsClient.getBucketAcl(bucketName);
+    boolean grantSet = false;
+    for (AccessControlList.Grant g: accessControlListGot.getGrantList()) {
+      if (g.getGranteeId().equals(accessIdAcl)) {
+        Assert.assertEquals(g.toString(), grant.toString());
+        grantSet = true;
+      }
+    }
+    Assert.assertTrue(grantSet);
   }
 }
