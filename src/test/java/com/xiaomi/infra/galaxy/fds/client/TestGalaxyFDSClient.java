@@ -1,20 +1,14 @@
 package com.xiaomi.infra.galaxy.fds.client;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
+import java.beans.PropertyEditor;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.net.ssl.SSLContext;
 
+import com.xiaomi.infra.galaxy.fds.client.model.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,10 +40,6 @@ import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.client.credential.BasicFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.credential.GalaxyFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
-import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectSummary;
 import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
 import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
@@ -64,10 +54,10 @@ import static org.junit.Assert.fail;
 public class TestGalaxyFDSClient {
 
   private static final Log LOG = LogFactory.getLog(GalaxyFDSClient.class);
-  private static final String accessId = "ACCESS_KEY";
-  private static final String accessSecret = "ACCESS_SECRET";
-  private static final String accessIdAcl = "ACCESS_KEY_ACL";
-  private static final String accessSecretAcl = "ACCESS_SECRET_ACL";
+  private static String accessId = "";
+  private static String accessSecret = "";
+  private static String accessIdAcl = "";
+  private static String accessSecretAcl = "";
   private static final String bucketPrefix = TestGalaxyFDSClient.class.getSimpleName() +
       "-" + System.currentTimeMillis();
   private static GalaxyFDSCredential credential;
@@ -84,6 +74,16 @@ public class TestGalaxyFDSClient {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
+    Properties prop = new Properties();
+    InputStream steam = TestGalaxyFDSClient.class.getClassLoader().getResourceAsStream("test.properties");
+    prop.load(steam);
+    steam.close();
+
+    accessId = prop.getProperty("accessId");
+    accessIdAcl = prop.getProperty("accessIdAcl");
+    accessSecret = prop.getProperty("accessSecret");
+    accessSecretAcl = prop.getProperty("accessSecretAcl");
+
     credential = new BasicFDSCredential(accessId, accessSecret);
     credentialAcl = new BasicFDSCredential(accessIdAcl, accessSecretAcl);
   }
@@ -94,7 +94,7 @@ public class TestGalaxyFDSClient {
 
   @Before
   public void setUp() throws Exception {
-    FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
+    FDSClientConfiguration fdsConfig = new FDSClientConfiguration("cnbj0-fds.api.xiaomi.net", false);
     fdsClient = new GalaxyFDSClient(credential, fdsConfig);
     fdsClientAcl = new GalaxyFDSClient(credentialAcl, fdsConfig);
     String methodName = currentTestName.getMethodName();
@@ -113,6 +113,9 @@ public class TestGalaxyFDSClient {
   @After
   public void tearDown() throws Exception {
     deleteObjectsAndBucket(fdsClient, bucketName);
+    for (String bucket2Delete : bucket2DeleteList){
+      deleteObjectsAndBucket(fdsClient, bucket2Delete);
+    }
   }
 
   @Test(timeout = 120 * 1000)
@@ -758,5 +761,117 @@ public class TestGalaxyFDSClient {
       }
     }
     Assert.assertTrue(grantSet);
+  }
+
+  @Test(timeout = 120 * 1000)
+  public void testPutObjectRequest() throws Exception{
+    final String objectName = "testPutObjectRequest_object";
+    final String testContent = "test_content";
+    assertTrue(!fdsClient.doesObjectExist(bucketName, objectName));
+
+    ProgressListener listener = new ProgressListener();
+
+    fdsClient.putObject(new FDSPutObjectRequest()
+      .withBucketName(bucketName)
+      .withObjectName(objectName)
+      .withInputStream(new ByteArrayInputStream(testContent.getBytes()), testContent.length())
+      .withMetadata(new FDSObjectMetadata())
+      .withProgressListener(listener));
+
+    assertEquals(listener.getTransferred(), testContent.getBytes().length);
+    assertEquals(listener.getTotal(), testContent.getBytes().length);
+
+    assertTrue(fdsClient.doesObjectExist(bucketName, objectName));
+    FDSObject fdsObject = fdsClient.getObject(bucketName, objectName);
+    String content = streamToString(fdsObject.getObjectContent());
+    assertEquals(testContent, content);
+
+    // test request with null members
+    String objectName1 = objectName+"1";
+    fdsClient.putObject(new FDSPutObjectRequest()
+      .withBucketName(bucketName)
+      .withObjectName(objectName1)
+      .withInputStream(new ByteArrayInputStream(testContent.getBytes()), testContent.length()));
+    FDSObject fdsObject1 = fdsClient.getObject(bucketName, objectName1);
+    String content1 = streamToString(fdsObject1.getObjectContent());
+    assertEquals(testContent, content1);
+  }
+
+  @Test
+  public void testSlowPutObjectRequest() throws Exception{
+    final String objectName = "testPutSlow_object";
+    assertTrue(!fdsClient.doesObjectExist(bucketName, objectName));
+
+    final long testLength = 8192*4;
+
+    ProgressListener listener = new ProgressListener(){
+      @Override
+      public void onProgress(long transferred, long total){
+        super.onProgress(transferred, total);
+        System.out.printf("%d : %d\n", transferred, total);
+      }
+    };
+
+    InputStream slowStream = new InputStream() {
+      @Override
+      public int read() throws IOException {
+        try{
+          Thread.sleep(1);
+        }
+        catch (Exception e){
+        }
+        return (int)'a';
+      }
+    };
+
+    fdsClient.putObject(new FDSPutObjectRequest()
+            .withBucketName(bucketName)
+            .withObjectName(objectName)
+            .withInputStream(slowStream, testLength)
+            .withMetadata(new FDSObjectMetadata())
+            .withProgressListener(listener));
+
+    assertEquals(listener.getTransferred(), testLength);
+    assertEquals(listener.getTotal(), testLength);
+
+    assertTrue(fdsClient.doesObjectExist(bucketName, objectName));
+    FDSObject fdsObject = fdsClient.getObject(bucketName, objectName);
+    assertEquals(fdsObject.getObjectMetadata().getContentLength(), testLength);
+  }
+
+  //@Test
+  public void testPutHugeFile() throws Exception{
+    final String objectName = "testPutHugeFile_object";
+    // edit it as your file path
+    final String filePath = "/tmp/huge.txt";
+    assertTrue(!fdsClient.doesObjectExist(bucketName, objectName));
+
+    ProgressListener listener = new ProgressListener(){
+      @Override
+      public void onProgress(long transferred, long total) {
+        super.onProgress(transferred, total);
+        System.out.printf("%d : %d\n", transferred, total);
+      }
+    };
+    File file = new File(filePath);
+
+    fdsClient.putObject(new FDSPutObjectRequest()
+      .withBucketName(bucketName)
+      .withObjectName(objectName)
+      .withFile(file)
+      .withMetadata(new FDSObjectMetadata())
+      .withProgressListener(listener));
+
+    assertEquals(listener.getTransferred(), file.length());
+    assertEquals(listener.getTotal(), file.length());
+
+    assertTrue(fdsClient.doesObjectExist(bucketName, objectName));
+    FDSObject fdsObject = fdsClient.getObject(bucketName, objectName);
+    assertEquals(fdsObject.getObjectMetadata().getContentLength(), file.length());
+
+    String s1 = streamToString(new BufferedInputStream(new FileInputStream(file)));
+    String s2 = streamToString(fdsObject.getObjectContent());
+
+    assertEquals(s1,s2);
   }
 }

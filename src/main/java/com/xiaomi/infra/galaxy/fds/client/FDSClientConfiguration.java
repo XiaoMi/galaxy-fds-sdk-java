@@ -1,18 +1,21 @@
 package com.xiaomi.infra.galaxy.fds.client;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
 /**
  * Created by zhangjunbin on 12/23/14.
  */
 public class FDSClientConfiguration {
-
   private static final String URI_HTTP_PREFIX = "http://";
   private static final String URI_HTTPS_PREFIX = "https://";
   private static final String URI_CDN = "cdn";
-  private static final String URI_SUFFIX = "fds.api.xiaomi.com";
-  private static final String URI_CDN_SUFFIX = "fds.api.mi-img.com";
+  // the http endpoint format for private network is region-fds.api.xiaomi.net
+  // or region-fds.api.xiaomi.net:port
+  private static final String URI_NET_SUFFIX = "-fds.api.xiaomi.net";
+  // The http endpoint format for public network is region.fds.api.xiaomi.com
+  // or region.fds.api.xiaomi.com:port
+  private static final String URI_COM_SUFFIX = ".fds.api.xiaomi.com";
+  private static final String URI_CDN_SUFFIX = ".fds.api.mi-img.com";
 
   /**
    * The default timeout for a connected socket.
@@ -35,9 +38,33 @@ public class FDSClientConfiguration {
    */
   public static final int DEFAULT_MAX_BATCH_DELETE_SIZE = 1000;
 
+  /**
+   * retry number for service unavailable status code
+   */
+  public static final int DEFAULT_RETRY_COUNT = 3;
+
+  /**
+   * interval between service unavailable retry
+   */
+  public static final int DEFAULT_RETRY_INTERVAL_MILLISEC = 500;
+
+  /**
+   * duration in millisec an ip is forbidden
+   * if 5xx if return of network exception occured
+   */
+  public static final int DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC = 10 * 1000;
+
+  /**
+   * keepalive timeout
+   */
+  public static final int DEFAULT_HTTP_KEEP_ALIVE_TIME_MILLISEC= 30 * 1000;
+
   private String regionName;
+  
   private String endpoint;
+  private String cdnEndpoint;
   private boolean enableHttps;
+  
   private boolean enableCdnForUpload;
   private boolean enableCdnForDownload;
   private boolean enableMd5Calculate;
@@ -51,10 +78,23 @@ public class FDSClientConfiguration {
   private int socketTimeoutMs = DEFAULT_SOCKET_TIMEOUT_MS;
   private int maxConnection = DEFAULT_MAX_CONNECTIONS;
   private int batchDeleteSize = DEFAULT_MAX_BATCH_DELETE_SIZE;
+  private int retryCount = DEFAULT_RETRY_COUNT;
+  private int retryIntervalMilliSec = DEFAULT_RETRY_INTERVAL_MILLISEC;
+  private int ipAddressNegativeDurationMillsec = DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC;
 
-  public FDSClientConfiguration() {
-    enableHttps = true;
-    regionName = "cnbj0";
+  private long HTTPKeepAliveTimeoutMS = DEFAULT_HTTP_KEEP_ALIVE_TIME_MILLISEC;
+
+  public FDSClientConfiguration(String endpoint) {
+    this(endpoint, true);
+  }
+  
+  public FDSClientConfiguration(String endpoint, boolean enableHttps) {
+    setEndpoint(endpoint);
+    init(enableHttps);
+  }
+  
+  private void init(boolean enableHttps) {
+    this.enableHttps = enableHttps;
     enableCdnForUpload = false;
     enableCdnForDownload = true;
     enableMd5Calculate = false;
@@ -63,23 +103,45 @@ public class FDSClientConfiguration {
     baseUriForUnitTest = "";
 
     enableMetrics = false;
-    enableApacheConnector = false;
+    enableApacheConnector = false;    
   }
-
-  public String getRegionName() {
-    return regionName;
+  
+  protected static String getCdnEndpoint(String regionName) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(URI_CDN).append(".").append(regionName).append(URI_CDN_SUFFIX);
+    return sb.toString();
   }
-
-  public void setRegionName(String regionName) {
-    this.regionName = regionName;
+  
+  protected void parseEndpoint(String endpoint) {
+    String host = endpoint.split(":")[0];
+    String uriSuffix;
+    if (host.endsWith(URI_NET_SUFFIX)) {
+      uriSuffix = URI_NET_SUFFIX;
+    } else if (host.endsWith(URI_COM_SUFFIX)) {
+      uriSuffix = URI_COM_SUFFIX;
+    } else {
+      throw new RuntimeException("illegal endpiont: " + endpoint);
+    }
+    this.regionName = host.substring(0, host.length() - uriSuffix.length());
   }
-
+  
+  public void setEndpoint(String endpoint) {
+    Preconditions.checkNotNull(endpoint);
+    this.endpoint = endpoint;
+    parseEndpoint(this.endpoint);
+    this.cdnEndpoint = getCdnEndpoint(regionName);
+  }
+  
   public String getEndpoint() {
     return endpoint;
   }
-
-  public void setEndpoint(String endpoint) {
-    this.endpoint = endpoint;
+  
+  public String getCdnEndpoint() {
+    return cdnEndpoint;
+  }
+  
+  public String getRegionName() {
+    return this.regionName;
   }
 
   public boolean isHttpsEnabled() {
@@ -89,11 +151,16 @@ public class FDSClientConfiguration {
   public void enableHttps(boolean enableHttps) {
     this.enableHttps = enableHttps;
   }
-
+  
   public boolean isCdnEnabledForUpload() {
     return enableCdnForUpload;
   }
 
+  /**
+   * Whether upload object using through cdn. This is a client option, 
+   * different clients could set different values for this option.
+   * @param enableCdnForUpload
+   */
   public void enableCdnForUpload(boolean enableCdnForUpload) {
     this.enableCdnForUpload = enableCdnForUpload;
   }
@@ -101,6 +168,11 @@ public class FDSClientConfiguration {
   public boolean isCdnEnabledForDownload() {
     return enableCdnForDownload; }
 
+  /**
+   * Whether upload object using through cdn. This is a client option, 
+   * different clients could set different values for this option.
+   * @param enableCdnForDownload
+   */
   public void enableCdnForDownload(boolean enableCdnForDownload) {
     this.enableCdnForDownload = enableCdnForDownload;
   }
@@ -165,16 +237,8 @@ public class FDSClientConfiguration {
     if (enableUnitTestMode) {
       return baseUriForUnitTest;
     }
-
-    StringBuilder sb = new StringBuilder();
-    sb.append(enableHttps ? URI_HTTPS_PREFIX : URI_HTTP_PREFIX);
-    if (!Strings.isNullOrEmpty(this.endpoint)) {
-      sb.append(this.endpoint);
-    } else if (enableCdn) {
-      sb.append(URI_CDN + "." + regionName + "." + URI_CDN_SUFFIX);
-    } else {
-      sb.append(regionName + "." + URI_SUFFIX);
-    }
+    StringBuilder sb = new StringBuilder(enableHttps ? URI_HTTPS_PREFIX : URI_HTTP_PREFIX);
+    sb.append(enableCdn ? cdnEndpoint : endpoint);
     sb.append("/");
     return sb.toString();
   }
@@ -266,6 +330,10 @@ public class FDSClientConfiguration {
     return maxConnection;
   }
 
+  public void setMaxConnection(int num) {
+    this.maxConnection = num;
+  }
+
   /**
    * Set items deleted each round in deleteObjects, if more than
    * $size object left, deleteObjects will delete them in several
@@ -286,4 +354,37 @@ public class FDSClientConfiguration {
   public int getMaxBatchDeleteSize() {
     return this.batchDeleteSize;
   }
+
+  public int getRetryCount() {
+    return this.retryCount;
+  }
+
+  public void setRetryCount(int retryCount) {
+    this.retryCount = retryCount;
+  }
+
+  public int getRetryIntervalMilliSec() {
+    return retryIntervalMilliSec;
+  }
+
+  public void setRetryIntervalMilliSec(int retryIntervalMilliSec) {
+    this.retryIntervalMilliSec = retryIntervalMilliSec;
+  }
+
+  public int getIpAddressNegativeDurationMillsec() {
+    return ipAddressNegativeDurationMillsec;
+  }
+
+  public void setIpAddressNegativeDurationMillsec(int ipAddressNegativeDurationMillsec) {
+    this.ipAddressNegativeDurationMillsec = ipAddressNegativeDurationMillsec;
+  }
+
+  public long getHTTPKeepAliveTimeoutMS() {
+    return HTTPKeepAliveTimeoutMS;
+  }
+
+  public void setHTTPKeepAliveTimeoutMS(long HTTPConnectionTimeoutMS) {
+    this.HTTPKeepAliveTimeoutMS = HTTPConnectionTimeoutMS;
+  }
+
 }

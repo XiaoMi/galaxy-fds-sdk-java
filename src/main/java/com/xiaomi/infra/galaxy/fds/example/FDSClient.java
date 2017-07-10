@@ -16,8 +16,8 @@ import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectInputStream;
 
 public class FDSClient {
 
-  private static final String APP_ACCESS_KEY = "APP_ACCESS_KEY";
-  private static final String APP_ACCESS_SECRET = "APP_ACCESS_SECRET";
+  private static final String APP_ACCESS_KEY = "5661737451747";
+  private static final String APP_ACCESS_SECRET = "nEs2UtrzwTSNS8irx+VC+w==";
 
   private static final String BUCKET_NAME = "java-sdk-example";
   private static final String OBJECT_NAME = "test.txt";
@@ -27,10 +27,14 @@ public class FDSClient {
     GalaxyFDSCredential credential = new BasicFDSCredential(
         APP_ACCESS_KEY, APP_ACCESS_SECRET);
 
-    // Construct the GalaxyFDSClient object.
-    FDSClientConfiguration fdsConfig = new FDSClientConfiguration();
+    // Construct the GalaxyFDSClient object
+    // set endpoint according to your needs.
+    String endpoint = "cnbj3-staging-fds.api.xiaomi.net";
+    FDSClientConfiguration fdsConfig = new FDSClientConfiguration(endpoint);
     fdsConfig.enableHttps(true);
+    // do not upload object via cdn in this client
     fdsConfig.enableCdnForUpload(false);
+    // download object via cdn in this client
     fdsConfig.enableCdnForDownload(true);
     GalaxyFDS fdsClient = new GalaxyFDSClient(credential, fdsConfig);
 
