@@ -58,6 +58,7 @@ public class TestGalaxyFDSClient {
   private static String accessSecret = "";
   private static String accessIdAcl = "";
   private static String accessSecretAcl = "";
+  private static String endpoint = "";
   private static final String bucketPrefix = TestGalaxyFDSClient.class.getSimpleName() +
       "-" + System.currentTimeMillis();
   private static GalaxyFDSCredential credential;
@@ -83,6 +84,7 @@ public class TestGalaxyFDSClient {
     accessIdAcl = prop.getProperty("accessIdAcl");
     accessSecret = prop.getProperty("accessSecret");
     accessSecretAcl = prop.getProperty("accessSecretAcl");
+    endpoint = prop.getProperty("endpoint");
 
     credential = new BasicFDSCredential(accessId, accessSecret);
     credentialAcl = new BasicFDSCredential(accessIdAcl, accessSecretAcl);
@@ -94,7 +96,7 @@ public class TestGalaxyFDSClient {
 
   @Before
   public void setUp() throws Exception {
-    FDSClientConfiguration fdsConfig = new FDSClientConfiguration("cnbj0-fds.api.xiaomi.net", false);
+    FDSClientConfiguration fdsConfig = new FDSClientConfiguration(endpoint, false);
     fdsClient = new GalaxyFDSClient(credential, fdsConfig);
     fdsClientAcl = new GalaxyFDSClient(credentialAcl, fdsConfig);
     String methodName = currentTestName.getMethodName();
