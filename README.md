@@ -24,7 +24,7 @@ github link: [https://github.com/XiaoMi/galaxy-fds-sdk-java.git]()
 2. Add the jar to classpath.
 
 ## Unit Tests(Examples)
-1. Edit galaxy-fds-sdk-java/src/test/resources/test.properties like this:
+1. Visit https://dev.mi.com/keycenter and edit galaxy-fds-sdk-java/src/test/resources/test.properties like this:
 ![image](https://github.com/XiaoMi/galaxy-fds-sdk-java/raw/master/java-sdk-test-setting.jpg)
 
 2. Run galaxy-fds-sdk-java/src/test/java/com/xiaomi/infra/galaxy/fds/client/TestGalaxyFDSClient.java as unit test.
