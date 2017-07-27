@@ -9,6 +9,9 @@ import java.util.*;
 import javax.net.ssl.SSLContext;
 
 import com.xiaomi.infra.galaxy.fds.client.model.*;
+import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
+import com.xiaomi.infra.galaxy.fds.result.UploadPartResult;
+import com.xiaomi.infra.galaxy.fds.result.UploadPartResultList;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -876,4 +879,44 @@ public class TestGalaxyFDSClient {
 
     assertEquals(s1,s2);
   }
+
+  @Test(timeout = 120 * 1000)
+  public void testMultipartUpload() throws Exception {
+    final String objectName = "multipart_object";
+    int partSize = 5 * 1024 * 1024;
+    int totalParts = 11;
+    final byte[][] partDataArray = new byte[totalParts][];
+    for (int i = 0; i < totalParts; i++) {
+      partDataArray[i] = new byte[partSize];
+      Arrays.fill(partDataArray[i], (byte) i);
+    }
+
+
+    final InitMultipartUploadResult result = fdsClient.initMultipartUpload(
+            bucketName, objectName);
+    Assert.assertNotNull(result);
+    String uploadId = result.getUploadId();
+
+    UploadPartResult[] uploadPartResults = new UploadPartResult[totalParts];
+    for (int i = 0; i < totalParts; i++) {
+      uploadPartResults[i] = fdsClient.uploadPart(bucketName,
+              objectName, uploadId, i + 1, new ByteArrayInputStream(partDataArray[i]));
+    }
+
+    FDSObjectMetadata metadata = new FDSObjectMetadata();
+    String contentType = "video/mp4";
+    metadata.setContentType("video/mp4");
+    UploadPartResultList uploadPartResultList = new UploadPartResultList();
+    uploadPartResultList.setUploadPartResultList(Arrays.asList(uploadPartResults));
+    fdsClient.completeMultipartUpload(bucketName, objectName, uploadId, metadata,
+            uploadPartResultList);
+
+    // read and verify
+    FDSObject object = fdsClient.getObject(bucketName, objectName);
+    System.out.println(object.getObjectMetadata().getContentType());
+    assertEquals(object.getObjectMetadata().getContentType(), contentType);
+
+  }
+
+
 }

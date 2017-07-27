@@ -1545,6 +1545,9 @@ public class GalaxyFDSClient implements GalaxyFDS {
     URI uri = formatUri(fdsConfig.getBaseUri(), bucketName + "/" + objectName,
         null);
     ContentType contentType = ContentType.APPLICATION_OCTET_STREAM;
+    if (metadata != null && metadata.getContentType() != null) {
+      contentType = ContentType.create(metadata.getContentType());
+    }
     HashMap<String, String> params = new HashMap<String, String>();
     params.put("uploadId", uploadId);
     StringEntity requestEntity = getJsonStringEntity(uploadPartResultList, ContentType.APPLICATION_JSON);

@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.xiaomi.infra.galaxy</groupId>
   <artifactId>galaxy-fds-sdk-java</artifactId>
-  <version>3.0.14</version>
+  <version>3.0.15</version>
   <packaging>jar</packaging>
   <name>Galaxy FDS Java SDK</name>
   <description>Xiaomi File Storage Service SDK</description>
