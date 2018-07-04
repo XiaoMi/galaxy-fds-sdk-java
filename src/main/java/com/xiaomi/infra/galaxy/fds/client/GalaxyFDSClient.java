@@ -959,10 +959,8 @@ public class GalaxyFDSClient implements GalaxyFDS {
       String errorMsg = formatErrorMsg("read entity stream", e);
       LOG.error(errorMsg);
       throw new GalaxyFDSClientException(errorMsg, e);
-    } finally {
-      if (rtnObject == null) {
-        closeResponseEntity(response);
-      }
+    } finally {     
+      closeResponseEntity(response);
     }
   }
 
