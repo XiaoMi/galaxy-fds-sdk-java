@@ -960,9 +960,7 @@ public class GalaxyFDSClient implements GalaxyFDS {
       LOG.error(errorMsg);
       throw new GalaxyFDSClientException(errorMsg, e);
     } finally {
-      if (rtnObject == null) {
         closeResponseEntity(response);
-      }
     }
   }
 
