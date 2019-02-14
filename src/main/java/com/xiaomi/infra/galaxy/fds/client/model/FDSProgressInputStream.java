@@ -49,16 +49,6 @@ public class FDSProgressInputStream extends FilterInputStream{
 	}
 
 	@Override
-	public int read(byte[] b) throws IOException {
-		int bytesRead = super.read(b);
-		if (bytesRead != -1 && listener != null) {
-			listener.transfer(bytesRead);
-			notifyListener(true);
-		}
-		return bytesRead;
-	}
-
-	@Override
 	public void close() throws IOException {
 		super.close();
 		notifyListener(false);

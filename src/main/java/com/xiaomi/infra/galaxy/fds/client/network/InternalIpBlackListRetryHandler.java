@@ -38,7 +38,13 @@ public class InternalIpBlackListRetryHandler extends DefaultHttpRequestRetryHand
     String hostName = HttpContextUtil.getHostNameFromContext(context);
 
     if (this.blackListEnabledHostChecker.needCheckDNSBlackList(hostName)) {
-      String remoteAddress = HttpContextUtil.getRemoteAddressFromContext(context);
+      String remoteAddress = null;
+      try {
+        remoteAddress = HttpContextUtil.getRemoteAddressFromContext(context);
+      } catch (Exception e) {
+        LOG.error("error occurred while getting remote address.");
+        return false;
+      }
       LOG.debug("IOException happened on connection with host [" + hostName + "]" +
           " ip [" + remoteAddress + "]", exception);
       ipAddressBlackList.put(remoteAddress);

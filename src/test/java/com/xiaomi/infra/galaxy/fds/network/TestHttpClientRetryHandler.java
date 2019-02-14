@@ -3,8 +3,8 @@ package com.xiaomi.infra.galaxy.fds.network;
 import java.io.IOException;
 import java.util.Arrays;
 
-import junit.framework.Assert;
 import org.apache.http.protocol.HttpContext;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

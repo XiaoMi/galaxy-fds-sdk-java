@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Random;
 
-import junit.framework.Assert;
 import org.apache.http.conn.DnsResolver;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -59,7 +59,6 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
             return localIpAddress;
           }
         });
-
   }
 
   @BeforeClass
@@ -158,12 +157,16 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
     }
   }
 
+  /**
+   * Ignore this test case, because the BufferedInputStream will be untied from sdk to ByteArrayInputStream,
+   * which is different from the old logic.
+   */
+  @Ignore
   @Test (timeout = 120 * 1000)
   public void testNoRetryWithNonRepeatableRequest() {
     // if request is non repeatable, no retry
     try {
-      putObject(MiniFDSRestserver.CAUSE_5XX_INSTRUCTION, "test",
-          new BufferedInputStream(new ByteArrayInputStream("test".getBytes())), null);
+      putObject(MiniFDSRestserver.CAUSE_5XX_INSTRUCTION, "test", new BufferedInputStream(new ByteArrayInputStream("test".getBytes())), null);
     } catch (GalaxyFDSClientException e) {
       Assert.assertEquals(1, dnsResolvedCnt);
     }

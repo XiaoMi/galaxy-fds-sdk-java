@@ -6,24 +6,32 @@ import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.xiaomi.infra.galaxy.fds.SubResource;
+import com.xiaomi.infra.galaxy.fds.bean.BucketBean;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSCopyObjectRequest;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSPutObjectRequest;
+import com.xiaomi.infra.galaxy.fds.client.model.InitiateMultipartUploadRequest;
 import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.model.AccessLogConfig;
 import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
 import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
 import com.xiaomi.infra.galaxy.fds.model.LifecycleConfig;
+import com.xiaomi.infra.galaxy.fds.model.ThirdPartyObject;
+import com.xiaomi.infra.galaxy.fds.model.TimestampAntiStealingLinkConfig;
+import com.xiaomi.infra.galaxy.fds.result.CopyObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
 import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.QuotaPolicy;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResult;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResultList;
 import com.xiaomi.infra.galaxy.fds.result.VersionListing;
+import com.xiaomi.infra.galaxy.fds.model.CORSConfiguration;
 
 public interface GalaxyFDS {
 
@@ -35,7 +43,7 @@ public interface GalaxyFDS {
    *         of the request
    * @throws GalaxyFDSClientException
    */
-  public List<FDSBucket> listBuckets() throws GalaxyFDSClientException;
+  List<FDSBucket> listBuckets() throws GalaxyFDSClientException;
 
   /**
    * Returns a list of all galaxy authorized fds buckets that the authenticated sender
@@ -45,7 +53,7 @@ public interface GalaxyFDS {
    *         of the request
    * @throws GalaxyFDSClientException
    */
-  public List<FDSBucket> listAuthorizedBuckets() throws GalaxyFDSClientException;
+  List<FDSBucket> listAuthorizedBuckets() throws GalaxyFDSClientException;
 
   /**
    * Creates a new fds bucket with the specified name.
@@ -53,7 +61,7 @@ public interface GalaxyFDS {
    * @param bucketName The name of the bucket to create
    * @throws GalaxyFDSClientException
    */
-  public void createBucket(String bucketName) throws GalaxyFDSClientException;
+  void createBucket(String bucketName) throws GalaxyFDSClientException;
 
   /**
    * Creates a new fds bucket with the specified name.
@@ -62,7 +70,7 @@ public interface GalaxyFDS {
    * @param bucketName The name of the bucket to create
    * @throws GalaxyFDSClientException
    */
-  public void createBucketUnderOrg(String org, String bucketName)
+  void createBucketUnderOrg(String org, String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -71,14 +79,22 @@ public interface GalaxyFDS {
    * @param bucketName The name of the bucket to delete
    * @throws GalaxyFDSClientException
    */
-  public void deleteBucket(String bucketName) throws GalaxyFDSClientException;
+  void deleteBucket(String bucketName) throws GalaxyFDSClientException;
 
   /**
    * Gets a fds bucket with the specified name.
    * @param bucketName The name of the bucket to get
    * @throws GalaxyFDSClientException
    */
-  public void getBucket(String bucketName) throws GalaxyFDSClientException;
+  @Deprecated void getBucket(String bucketName) throws GalaxyFDSClientException;
+
+  /**
+   * Get the basic usage of a bucket using bucket name
+   * @param bucketName The name of bucket
+   * @return basic usage information of bucket
+   * @throws GalaxyFDSClientException
+   */
+  BucketBean getBucketInfo(String bucketName) throws GalaxyFDSClientException;
 
   /**
    * Checks if the specified bucket exists.
@@ -87,7 +103,7 @@ public interface GalaxyFDS {
    * @return The value true if the specified bucket exists, otherwise false
    * @throws GalaxyFDSClientException
    */
-  public boolean doesBucketExist(String bucketName)
+  boolean doesBucketExist(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -97,7 +113,7 @@ public interface GalaxyFDS {
    * @return The AccessControlList for the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public AccessControlList getBucketAcl(String bucketName)
+  AccessControlList getBucketAcl(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -107,7 +123,17 @@ public interface GalaxyFDS {
    * @param acl        The new AccessControlList for the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public void setBucketAcl(String bucketName, AccessControlList acl)
+  void setBucketAcl(String bucketName, AccessControlList acl)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Deletes the AccessControlList(ACL) of the specified fds bucket.
+   *
+   * @param bucketName The Name of the bucket whose acl is being delete
+   * @param acl        The ACL to delete for the specified bucket
+   * @throws GalaxyFDSClientException
+   */
+  void deleteBucketAcl(String bucketName, AccessControlList acl)
       throws GalaxyFDSClientException;
 
   /**
@@ -117,6 +143,7 @@ public interface GalaxyFDS {
    * @return The QuotaPolicy for the specified bucket
    * @throws GalaxyFDSClientException
    */
+  @Deprecated
   QuotaPolicy getBucketQuota(String bucketName)
       throws GalaxyFDSClientException;
 
@@ -127,6 +154,7 @@ public interface GalaxyFDS {
    * @param quotaPolicy The new quota policy for the bucket
    * @throws GalaxyFDSClientException
    */
+  @Deprecated
   void setBucketQuota(String bucketName, QuotaPolicy quotaPolicy)
       throws GalaxyFDSClientException;
 
@@ -147,7 +175,7 @@ public interface GalaxyFDS {
    * @return A listing of the objects in the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectListing listObjects(String bucketName)
+  FDSObjectListing listObjects(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -156,7 +184,7 @@ public interface GalaxyFDS {
    * @return A listing of the versions in the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public VersionListing listVersions(String bucketName)
+  VersionListing listVersions(String bucketName)
       throws GalaxyFDSClientException;
   /**
    * Returns a list of summary information about the objects in the specified
@@ -168,7 +196,7 @@ public interface GalaxyFDS {
    * @return A listing of the objects in the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectListing listObjects(String bucketName, String prefix)
+  FDSObjectListing listObjects(String bucketName, String prefix)
       throws GalaxyFDSClientException;
 
   /**
@@ -179,7 +207,7 @@ public interface GalaxyFDS {
    * @return A listing of the versions in the specified bucket.
    * @throws GalaxyFDSClientException
    */
-  public VersionListing listVersions(String bucketName, String prefix)
+  VersionListing listVersions(String bucketName, String prefix)
       throws GalaxyFDSClientException;
 
   /**
@@ -193,8 +221,33 @@ public interface GalaxyFDS {
    * @return A listing of the objects in the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectListing listObjects(String bucketName, String prefix,
-                                      String delimiter) throws GalaxyFDSClientException;
+  FDSObjectListing listObjects(String bucketName, String prefix, String delimiter) throws GalaxyFDSClientException;
+
+  /**
+   * Return a list of summary information about the versions in the specified bucket
+   * @param bucketName bucket name
+   * @param prefix prefix of objects to list
+   * @param delimiter delimiter in object name
+   * @param reverse reverse list or not
+   * @return listing result
+   * @throws GalaxyFDSClientException exception
+   */
+  FDSObjectListing listObjects(String bucketName, String prefix, String delimiter,
+      boolean reverse) throws GalaxyFDSClientException;
+
+
+  /**
+   * Return a list of summary information about the versions in the specified bucket
+   * @param bucketName bucket name
+   * @param prefix prefix of objects to list
+   * @param delimiter delimiter in object name
+   * @param reverse reverse list or not
+   * @param isBackup list backup hbase cluster
+   * @return listing result
+   * @throws GalaxyFDSClientException exception
+   */
+  FDSObjectListing listObjects(String bucketName, String prefix,
+                                      String delimiter, boolean reverse, boolean isBackup) throws GalaxyFDSClientException;
 
   /**
    * Returns a list of summary information about the objects in the specified bucket.
@@ -206,8 +259,7 @@ public interface GalaxyFDS {
    * @return A listing of the versions in the specified bucket.
    * @throws GalaxyFDSClientException
    */
-  public VersionListing listVersions(String bucketName, String prefix,
-                                     String delimiter) throws GalaxyFDSClientException;
+  VersionListing listVersions(String bucketName, String prefix, String delimiter) throws GalaxyFDSClientException;
 
   /**
    * Returns a list of summary information about the objects in the trash.
@@ -218,8 +270,7 @@ public interface GalaxyFDS {
    * @return
    * @throws GalaxyFDSClientException
    */
-  @Deprecated
-  public FDSObjectListing listTrashObjects(String prefix, String delimiter)
+  @Deprecated FDSObjectListing listTrashObjects(String prefix, String delimiter)
       throws GalaxyFDSClientException;
 
   /**
@@ -231,8 +282,7 @@ public interface GalaxyFDS {
    *         the last result in the specified previous ObjectListing.
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectListing listNextBatchOfObjects(
-          FDSObjectListing previousObjectListing) throws GalaxyFDSClientException;
+  FDSObjectListing listNextBatchOfObjects(FDSObjectListing previousObjectListing) throws GalaxyFDSClientException;
 
   /**
    * Provides an easy way to continue a truncated version listing and retrieve
@@ -242,7 +292,7 @@ public interface GalaxyFDS {
    *         after the last result in the specified previous VersionListing.
    * @throws GalaxyFDSClientException
    */
-  public VersionListing listNextBatchOfVersions(VersionListing versionListing)
+  VersionListing listNextBatchOfVersions(VersionListing versionListing)
       throws GalaxyFDSClientException;
 
   /**
@@ -259,8 +309,7 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult putObject(String bucketName, String objectName,
-                                   File file) throws GalaxyFDSClientException;
+  PutObjectResult putObject(String bucketName, String objectName, File file) throws GalaxyFDSClientException;
 
   /**
    *
@@ -302,8 +351,8 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult putObject(String bucketName, String objectName,
-                                   InputStream input, FDSObjectMetadata metadata)
+  PutObjectResult putObject(String bucketName, String objectName, InputStream input,
+      FDSObjectMetadata metadata)
       throws GalaxyFDSClientException;
 
   /**
@@ -314,7 +363,7 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult putObject(FDSPutObjectRequest request) throws GalaxyFDSClientException;
+  PutObjectResult putObject(FDSPutObjectRequest request) throws GalaxyFDSClientException;
 
   /**
    * Uploads the specified file to a galaxy fds bucket, an unique object name
@@ -326,7 +375,7 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult postObject(String bucketName, File file)
+  PutObjectResult postObject(String bucketName, File file)
       throws GalaxyFDSClientException;
 
   /**
@@ -341,8 +390,7 @@ public interface GalaxyFDS {
    *         galaxy fds for the newly created object
    * @throws GalaxyFDSClientException
    */
-  public PutObjectResult postObject(String bucketName, InputStream input,
-                                    FDSObjectMetadata metadata) throws GalaxyFDSClientException;
+  PutObjectResult postObject(String bucketName, InputStream input, FDSObjectMetadata metadata) throws GalaxyFDSClientException;
 
   /**
    * Gets the object stored in galaxy fds with the specified name under the
@@ -353,7 +401,7 @@ public interface GalaxyFDS {
    * @return The object stored in galaxy fds under the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObject getObject(String bucketName, String objectName)
+  FDSObject getObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -365,8 +413,7 @@ public interface GalaxyFDS {
    * @return The version stored in galaxy fds under the specified bucket.
    * @throws GalaxyFDSClientException
    */
-  public FDSObject getObject(String bucketName, String objectName, String
-          versionId) throws GalaxyFDSClientException;
+  FDSObject getObject(String bucketName, String objectName, String versionId) throws GalaxyFDSClientException;
 
   /**
    * Gets the object stored in galaxy fds with the specified name under the
@@ -378,8 +425,23 @@ public interface GalaxyFDS {
    * @return The object stored in galaxy fds under the specifed bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObject getObject(String bucketName, String objectName, long pos)
+  FDSObject getObject(String bucketName, String objectName, long pos)
       throws GalaxyFDSClientException;
+
+    /**
+   * Gets the object stored in galaxy fds with the specified name and versionId under the
+   * specified bucket.
+   *
+   * @param bucketName The name of the bucket where the object stores
+   * @param objectName The name of the object to get
+   * @param versionId The versionId of the object to get
+   * @param pos        The position to start read
+   * @return The object stored in galaxy fds under the specifed bucket
+   * @throws GalaxyFDSClientException
+   */
+    FDSObject getObject(String bucketName, String objectName, String versionId, long pos)
+      throws GalaxyFDSClientException;
+
 
   /**
    * Gets the meta information of object with the specified name under the
@@ -391,8 +453,7 @@ public interface GalaxyFDS {
    *         the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectMetadata getObjectMetadata(String bucketName,
-                                             String objectName) throws GalaxyFDSClientException;
+  FDSObjectMetadata getObjectMetadata(String bucketName, String objectName) throws GalaxyFDSClientException;
 
   /**
    * Gets the meta information of version with the specified name and versionId
@@ -404,8 +465,7 @@ public interface GalaxyFDS {
    *         the specified bucket
    * @throws GalaxyFDSClientException
    */
-  public FDSObjectMetadata getObjectMetadata(String bucketName, String
-          objectName, String versionId) throws GalaxyFDSClientException;
+  FDSObjectMetadata getObjectMetadata(String bucketName, String objectName, String versionId) throws GalaxyFDSClientException;
 
   /**
    * Gets the AccessControlList(ACL) of the specified fds object.
@@ -415,7 +475,7 @@ public interface GalaxyFDS {
    * @return The {@link AccessControlList} of the specified object
    * @throws GalaxyFDSClientException
    */
-  public AccessControlList getObjectAcl(String bucketName, String objectName)
+  AccessControlList getObjectAcl(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -426,8 +486,7 @@ public interface GalaxyFDS {
    * @return The {@link AccessControlList} of the specified object
    * @throws GalaxyFDSClientException
    */
-  public AccessControlList getObjectAcl(String bucketName, String objectName,
-                                        String versionId) throws GalaxyFDSClientException;
+  AccessControlList getObjectAcl(String bucketName, String objectName, String versionId) throws GalaxyFDSClientException;
 
   /**
    * Sets the AccessControlList(ACL) of the specified fds object.
@@ -437,8 +496,7 @@ public interface GalaxyFDS {
    * @param acl        The ACL to set for the specified object
    * @throws GalaxyFDSClientException
    */
-  public void setObjectAcl(String bucketName, String objectName,
-                           AccessControlList acl) throws GalaxyFDSClientException;
+  void setObjectAcl(String bucketName, String objectName, AccessControlList acl) throws GalaxyFDSClientException;
 
   /**
    * Sets the AccessControlList(ACL) of the specified version.
@@ -448,8 +506,7 @@ public interface GalaxyFDS {
    * @param acl The ACL to set for the specified version
    * @throws GalaxyFDSClientException
    */
-  public void setObjectAcl(String bucketName, String objectName, String
-          versionId, AccessControlList acl) throws GalaxyFDSClientException;
+  void setObjectAcl(String bucketName, String objectName, String versionId, AccessControlList acl) throws GalaxyFDSClientException;
 
   /**
    * Deletes the AccessControlList(ACL) of the specified fds object.
@@ -458,8 +515,7 @@ public interface GalaxyFDS {
    * @param acl        The ACL to delete for the specified object
    * @throws GalaxyFDSClientException
    */
-  public void deleteObjectAcl(String bucketName, String objectName,
-                              AccessControlList acl) throws GalaxyFDSClientException;
+  void deleteObjectAcl(String bucketName, String objectName, AccessControlList acl) throws GalaxyFDSClientException;
 
   /**
    * Deletes the AccessControlList(ACL) of the specified version.
@@ -469,8 +525,8 @@ public interface GalaxyFDS {
    * @param acl        The ACL to delete for the specified object
    * @throws GalaxyFDSClientException
    */
-  public void deleteObjectAcl(String bucketName, String objectName, String
-          versionId, AccessControlList acl) throws GalaxyFDSClientException;
+  void deleteObjectAcl(String bucketName, String objectName, String versionId,
+      AccessControlList acl) throws GalaxyFDSClientException;
 
   /**
    * Checks if the object with the specified name under the specified bucket
@@ -481,7 +537,7 @@ public interface GalaxyFDS {
    * @return The value true if the specified object exists, otherwise false
    * @throws GalaxyFDSClientException
    */
-  public boolean doesObjectExist(String bucketName, String objectName)
+  boolean doesObjectExist(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -493,8 +549,7 @@ public interface GalaxyFDS {
    * @return The value true if the specified version exists, otherwise false.
    * @throws GalaxyFDSClientException
    */
-  public boolean doesObjectExist(String bucketName, String objectName, String
-          versionId) throws GalaxyFDSClientException;
+  boolean doesObjectExist(String bucketName, String objectName, String versionId) throws GalaxyFDSClientException;
 
   /**
    * Deletes the object with the specified name under the specified bucket.
@@ -503,10 +558,13 @@ public interface GalaxyFDS {
    * @param objectName The name of the object to delete
    * @throws GalaxyFDSClientException
    */
-  public void deleteObject(String bucketName, String objectName)
+  void deleteObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
-  public void deleteObject(String bucketName, String objectName, String versionId)
+  void deleteObject(String bucketName, String objectName, String versionId)
+      throws GalaxyFDSClientException;
+
+  void deleteObject(String bucketName, String objectName, String versionId, boolean enableTrash)
       throws GalaxyFDSClientException;
 
   /**
@@ -526,7 +584,28 @@ public interface GalaxyFDS {
    *   ,...
    * ]
    */
-  public List<Map<String, Object>> deleteObjects(String bucketName, String prefix)
+  List<Map<String, Object>> deleteObjects(String bucketName, String prefix)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Deletes objects with specified prefix under specified bucket.
+   *
+   * @param bucketName The name of the bucket where the objects store
+   * @param prefix     An optional parameter restricting the response to keys
+   *                    beginning with the specified prefix.
+   * @param enableTrash If true, move object to Trash; else direct delete; default True;
+   * @throws GalaxyFDSClientException
+   * @return list of failed deletion:
+   * [
+   *   {
+   *     "object_name": "$OBJECT_NAME",
+   *     "error_code": $ERROR_CODE,
+   *     "error_description": "$ERROR_MESSAGE"
+   *   }
+   *   ,...
+   * ]
+   */
+  List<Map<String, Object>> deleteObjects(String bucketName, String prefix, boolean enableTrash)
       throws GalaxyFDSClientException;
 
   /**
@@ -545,7 +624,28 @@ public interface GalaxyFDS {
    *   ,...
    * ]
    */
-  public List<Map<String, Object>> deleteObjects(String bucketName, List<String> objectNameList)
+  List<Map<String, Object>> deleteObjects(String bucketName, List<String> objectNameList)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Deletes the objects with the specified name under the specified bucket,
+   * length of objectNameList limit to 1k
+   * @param bucketName     The name of the bucket where the objects store
+   * @param objectNameList The list of names of the object to delete
+   * @param enableTrash    If true, move object to Trash; else direct delete; default True;
+   * @throws GalaxyFDSClientException
+   * @return list of failed deletion:
+   * [
+   *   {
+   *     "object_name": "$OBJECT_NAME",
+   *     "error_code": $ERROR_CODE,
+   *     "error_description": "$ERROR_MESSAGE"
+   *   }
+   *   ,...
+   * ]
+   */
+  List<Map<String, Object>> deleteObjects(String bucketName, List<String> objectNameList,
+      boolean enableTrash)
       throws GalaxyFDSClientException;
 
   /**
@@ -555,7 +655,7 @@ public interface GalaxyFDS {
    * @param objectName The name of the object to restore
    * @throws GalaxyFDSClientException
    */
-  public void restoreObject(String bucketName, String objectName)
+  void restoreObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -566,7 +666,7 @@ public interface GalaxyFDS {
    * @param dstObjectName The name of the destination object
    * @throws GalaxyFDSClientException
    */
-  public void renameObject(String bucketName, String srcObjectName, String dstObjectName)
+  void renameObject(String bucketName, String srcObjectName, String dstObjectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -575,7 +675,7 @@ public interface GalaxyFDS {
    * @param objectName The name of the object to prefetch
    * @throws GalaxyFDSClientException
    */
-  public long prefetchObject(String bucketName, String objectName)
+  long prefetchObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -584,7 +684,7 @@ public interface GalaxyFDS {
    * @param objectName The name of the object to refresh
    * @throws GalaxyFDSClientException
    */
-  public long refreshObject(String bucketName, String objectName)
+  long refreshObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -593,7 +693,17 @@ public interface GalaxyFDS {
    * @param domainName
    * @throws GalaxyFDSClientException
    */
-  public void putDomainMapping(String bucketName, String domainName)
+  void putDomainMapping(String bucketName, String domainName)
+      throws GalaxyFDSClientException;
+
+  /**
+   * Add a domain mapping for the specified bucket.
+   * @param bucketName
+   * @param domainName
+   * @param indexName
+   * @throws GalaxyFDSClientException
+   */
+  void putDomainMapping(String bucketName, String domainName, String indexName)
       throws GalaxyFDSClientException;
 
   /**
@@ -601,7 +711,7 @@ public interface GalaxyFDS {
    * @param bucketName
    * @throws GalaxyFDSClientException
    */
-  public List<String> listDomainMappings(String bucketName)
+  List<String> listDomainMappings(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -609,12 +719,24 @@ public interface GalaxyFDS {
    * @param bucketName
    * @throws GalaxyFDSClientException
    */
-  public void deleteDomainMapping(String bucketName, String domainName)
+  void deleteDomainMapping(String bucketName, String domainName)
       throws GalaxyFDSClientException;
 
 
-  public void cropImage(String bucketName, String objectName, int x, int y, int w, int h)
+  void cropImage(String bucketName, String objectName, int x, int y, int w, int h)
       throws GalaxyFDSClientException;
+
+  /**
+   * Get thumbnail of the object
+   * @param bucketName
+   * @param objectName
+   * @param w
+   * @param h
+   * @return
+   * @throws GalaxyFDSClientException
+   */
+  FDSObject getThumbnail(String bucketName, String objectName, int w, int h)
+     throws GalaxyFDSClientException;
 
   /**
    * Set the object public to all users, it will also be pre-fetched to CDN.
@@ -622,8 +744,15 @@ public interface GalaxyFDS {
    * @param objectName The name of the desired object
    * @throws GalaxyFDSClientException
    */
-  public void setPublic(String bucketName, String objectName)
+  void setPublic(String bucketName, String objectName)
       throws GalaxyFDSClientException;
+
+  /**
+   * Set the bucket public to all users
+   * @param bucketName The name of the desired bucket
+   * @throws GalaxyFDSClientException
+   */
+  void setPublic(String bucketName) throws GalaxyFDSClientException;
 
   /**
    * Return a URI for downloading Galaxy FDS resource.
@@ -633,7 +762,7 @@ public interface GalaxyFDS {
    * @return A URI for downloading Galaxy FDS resource.
    * @throws GalaxyFDSClientException
    */
-  public URI generateDownloadObjectUri(String bucketName, String ObjectName)
+  URI generateDownloadObjectUri(String bucketName, String ObjectName)
       throws GalaxyFDSClientException;
 
   /**
@@ -647,8 +776,7 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedUri(String bucketName, String objectName,
-                                  Date expiration) throws GalaxyFDSClientException;
+  URI generatePresignedUri(String bucketName, String objectName, Date expiration) throws GalaxyFDSClientException;
 
   /**
    * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
@@ -661,8 +789,7 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedCdnUri(String bucketName, String objectName,
-                                     Date expiration) throws GalaxyFDSClientException;
+  URI generatePresignedCdnUri(String bucketName, String objectName, Date expiration) throws GalaxyFDSClientException;
 
   /**
    * Returns a pre-signed URI for accessing Galaxy FDS resource.
@@ -676,8 +803,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedUri(String bucketName, String objectName,
-                                  Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException;
+  URI generatePresignedUri(String bucketName, String objectName, Date expiration,
+      HttpMethod httpMethod) throws GalaxyFDSClientException;
 
   /**
    * Returns a pre-signed CDN URI for accessing Galaxy FDS resource.
@@ -691,8 +818,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedCdnUri(String bucketName, String objectName,
-                                     Date expiration, HttpMethod httpMethod) throws GalaxyFDSClientException;
+  URI generatePresignedCdnUri(String bucketName, String objectName, Date expiration,
+      HttpMethod httpMethod) throws GalaxyFDSClientException;
 
   /**
    * Returns a pre-signed URI for accessing Galaxy FDS resource.
@@ -707,9 +834,24 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedUri(String bucketName, String objectName,
-                                  SubResource subResource, Date expiration, HttpMethod httpMethod)
+  URI generatePresignedUri(String bucketName, String objectName, SubResource subResource,
+      Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
+
+  /**
+   * Returns a pre-signed URI for accessing Galaxy FDS resource
+   * @param bucketName bucketName
+   * @param objectName objectName
+   * @param subResources sub resources
+   * @param expiration expiration
+   * @param httpMethod http method
+   * @param contentType content type
+   * @param contentMD5 content md5
+   * @return uri
+   * @throws GalaxyFDSClientException exception
+   */
+  URI generatePresignedUri(String bucketName, String objectName, List<String> subResources,
+      Date expiration, HttpMethod httpMethod, String contentType, String contentMD5) throws GalaxyFDSClientException;
 
   /**
    * Returns a pre-signed URI for accessing Galaxy FDS resource.
@@ -724,8 +866,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedUri(String bucketName, String objectName,
-                                  List<String> subResources, Date expiration, HttpMethod httpMethod)
+  URI generatePresignedUri(String bucketName, String objectName, List<String> subResources,
+      Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
 
   /**
@@ -742,9 +884,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedUri(String bucketName, String objectName,
-                                  List<String> subResources, Date expiration, HttpMethod httpMethod,
-                                  String contentType)
+  URI generatePresignedUri(String bucketName, String objectName, List<String> subResources,
+      Date expiration, HttpMethod httpMethod, String contentType)
       throws GalaxyFDSClientException;
 
   /**
@@ -760,8 +901,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedCdnUri(String bucketName, String objectName,
-                                     SubResource subResource, Date expiration, HttpMethod httpMethod)
+  URI generatePresignedCdnUri(String bucketName, String objectName, SubResource subResource,
+      Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
 
     /**
@@ -777,8 +918,8 @@ public interface GalaxyFDS {
    *         fds, without exposing the owner's Galaxy secret access key.
    * @throws GalaxyFDSClientException
    */
-  public URI generatePresignedCdnUri(String bucketName, String objectName,
-                                     List<String> subResources, Date expiration, HttpMethod httpMethod)
+    URI generatePresignedCdnUri(String bucketName, String objectName, List<String> subResources,
+        Date expiration, HttpMethod httpMethod)
       throws GalaxyFDSClientException;
 
   /**
@@ -788,8 +929,20 @@ public interface GalaxyFDS {
    * @return A InitMultipartUploadResult which contains uploadId.
    * @throws GalaxyFDSClientException
    */
-  public InitMultipartUploadResult initMultipartUpload(String bucketName,
-                                                       String objectName) throws GalaxyFDSClientException;
+  InitMultipartUploadResult initMultipartUpload(String bucketName, String objectName) throws GalaxyFDSClientException;
+
+    /**
+   * Init a multipart upload session
+   * @param bucketName
+   * @param objectName
+   * @return A InitMultipartUploadResult which contains uploadId.
+   * @throws GalaxyFDSClientException
+   */
+    InitMultipartUploadResult initMultipartUpload(String bucketName, String objectName,
+        FDSObjectMetadata metadata) throws GalaxyFDSClientException;
+
+  InitMultipartUploadResult initMultipartUpload(InitiateMultipartUploadRequest request) throws GalaxyFDSClientException;
+
 
   /**
    * Upload a part
@@ -801,8 +954,8 @@ public interface GalaxyFDS {
    * @return A UploadPartResult which contains the part's ETag.
    * @throws GalaxyFDSClientException
    */
-  public UploadPartResult uploadPart(String bucketName, String objectName,
-                                     String uploadId, int partNumber, InputStream in)
+  UploadPartResult uploadPart(String bucketName, String objectName, String uploadId, int partNumber,
+      InputStream in)
       throws GalaxyFDSClientException;
 
   /**
@@ -815,9 +968,8 @@ public interface GalaxyFDS {
    *                             returned by uploadPart.
    * @return A PutObjectResult which is the same as the one returned by putObject.
    */
-  public PutObjectResult completeMultipartUpload(String bucketName,
-                                                 String objectName, String uploadId, FDSObjectMetadata metadata,
-                                                 UploadPartResultList uploadPartResultList) throws GalaxyFDSClientException;
+  PutObjectResult completeMultipartUpload(String bucketName, String objectName, String uploadId,
+      FDSObjectMetadata metadata, UploadPartResultList uploadPartResultList) throws GalaxyFDSClientException;
 
   /**
    * Abort the multipart upload session.
@@ -826,8 +978,7 @@ public interface GalaxyFDS {
    * @param uploadId
    * @throws GalaxyFDSClientException
    */
-  public void abortMultipartUpload(String bucketName, String objectName,
-                                   String uploadId) throws GalaxyFDSClientException;
+  void abortMultipartUpload(String bucketName, String objectName, String uploadId) throws GalaxyFDSClientException;
 
   /**
    * Get AccessLogConfig of the specified bucket.
@@ -835,7 +986,7 @@ public interface GalaxyFDS {
    * @return
    * @throws GalaxyFDSClientException
    */
-  public AccessLogConfig getAccessLogConfig(String bucketName)
+  AccessLogConfig getAccessLogConfig(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -844,8 +995,7 @@ public interface GalaxyFDS {
    * @param accessLogConfig
    * @throws GalaxyFDSClientException
    */
-  public void updateAccessLogConfig(String bucketName, AccessLogConfig
-          accessLogConfig) throws GalaxyFDSClientException;
+  void updateAccessLogConfig(String bucketName, AccessLogConfig accessLogConfig) throws GalaxyFDSClientException;
 
   /**
    * Get lifecycle config of the specified bucket.
@@ -853,7 +1003,7 @@ public interface GalaxyFDS {
    * @return
    * @throws GalaxyFDSClientException
    */
-  public LifecycleConfig getLifecycleConfig(String bucketName)
+  LifecycleConfig getLifecycleConfig(String bucketName)
       throws GalaxyFDSClientException;
 
   /**
@@ -862,6 +1012,75 @@ public interface GalaxyFDS {
    * @param lifecycleConfig
    * @throws GalaxyFDSClientException
    */
-  public void updateLifecycleConfig(String bucketName, LifecycleConfig
-          lifecycleConfig) throws GalaxyFDSClientException;
+  void updateLifecycleConfig(String bucketName, LifecycleConfig lifecycleConfig) throws GalaxyFDSClientException;
+
+  URI generateAntiStealingUri(String bucketName, String objectName, Date expiration, String key)
+      throws GalaxyFDSClientException;
+
+  URI generateAntiStealingCdnUri(String bucketName, String objectName, Date expiration, String key)
+      throws GalaxyFDSClientException;
+
+  /**
+   * @return set of methods which should be retried;
+   */
+  Set<String> getRetryMethodSet();
+
+  /**
+   * Migrate bucket to new eco authentication
+   * @param bucketName
+   * @param orgId, new eco orgId
+   * @param teamId, this teamId will be grant full control
+   * @throws GalaxyFDSClientException
+   */
+  void migrateBucket(String bucketName, String orgId, String teamId)
+      throws GalaxyFDSClientException;
+
+  void setMirror(String bucketName, String mirrorAddress)
+      throws GalaxyFDSClientException;
+
+  String getMirror(String bucketName) throws GalaxyFDSClientException;
+
+  void deleteMirror(String bucketName) throws GalaxyFDSClientException;
+
+  void updateTimestampAntiStealingLinkConfig(String bucketName,
+      TimestampAntiStealingLinkConfig antiStealingLinkConfig) throws GalaxyFDSClientException;
+
+  TimestampAntiStealingLinkConfig getTimestampAntiStealingLinkConfig(String bucketName)
+      throws GalaxyFDSClientException;
+
+  void deleteTimestampAntiStealingLinkConfig(String bucketName)
+      throws GalaxyFDSClientException;
+
+  void setDelimiter(String delimiter);
+
+  FDSClientConfiguration getFdsConfig();
+
+  CopyObjectResult copyObject(FDSCopyObjectRequest request) throws GalaxyFDSClientException;
+
+  CopyObjectResult copyObject(String srcBucketName, String srcObjectName, String dstBucketName,
+      String dstObjectName) throws GalaxyFDSClientException;
+
+  CopyObjectResult copyObject(String bucketName, String srcObjectName, String dstObjectName) throws GalaxyFDSClientException;
+
+  CORSConfiguration getBucketCORSConfiguration(String bucketName) throws GalaxyFDSClientException;
+
+  CORSConfiguration.CORSRule getBucketCORSRule(String bucketName, final String ruleId)
+      throws GalaxyFDSClientException;
+
+  void updateBucketCORSConfiguration(String bucketName, CORSConfiguration corsConfiguration)
+      throws GalaxyFDSClientException;
+
+  void addOrUpdateBucketCORSRule(String bucketName, CORSConfiguration.CORSRule rule)
+      throws GalaxyFDSClientException;
+
+  ThirdPartyObject getThirdPartyObject(String bucketName, String objectName)
+      throws GalaxyFDSClientException;
+
+  FDSObject getObjectFromThirdParty(String bucketName, String objectName, long pos)
+      throws GalaxyFDSClientException;
+
+  void setDefaultGifExtractType(String bucketName, String type)
+      throws GalaxyFDSClientException;
+
+  String getDefaultGifExtractType(String bucketName) throws GalaxyFDSClientException;
 }

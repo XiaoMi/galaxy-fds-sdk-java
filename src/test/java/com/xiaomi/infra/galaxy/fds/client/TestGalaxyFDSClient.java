@@ -1,44 +1,53 @@
 package com.xiaomi.infra.galaxy.fds.client;
 
-import java.beans.PropertyEditor;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-import javax.net.ssl.SSLContext;
-
-import com.xiaomi.infra.galaxy.fds.client.model.*;
+import com.google.common.collect.Lists;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSCopyObjectRequest;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectSummary;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSPutObjectRequest;
+import com.xiaomi.infra.galaxy.fds.client.model.GzipCompressingInputStream;
+import com.xiaomi.infra.galaxy.fds.client.model.InitiateMultipartUploadRequest;
+import com.xiaomi.infra.galaxy.fds.client.model.ProgressListener;
+import com.xiaomi.infra.galaxy.fds.model.LifecycleConfig;
+import com.xiaomi.infra.galaxy.fds.result.CopyObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
+import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResult;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResultList;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.socket.PlainConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import com.xiaomi.infra.galaxy.fds.Common;
 import com.xiaomi.infra.galaxy.fds.SubResource;
 import com.xiaomi.infra.galaxy.fds.client.credential.BasicFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.credential.GalaxyFDSCredential;
@@ -46,13 +55,15 @@ import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
 import com.xiaomi.infra.galaxy.fds.model.AccessControlList;
 import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
 import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
-import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import com.xiaomi.infra.galaxy.fds.model.CORSConfiguration;
+import com.xiaomi.infra.galaxy.fds.model.CORSConfiguration.CORSRule;
 
 public class TestGalaxyFDSClient {
 
@@ -66,8 +77,9 @@ public class TestGalaxyFDSClient {
       "-" + System.currentTimeMillis();
   private static GalaxyFDSCredential credential;
   private static GalaxyFDSCredential credentialAcl;
+  private long limitBandwidth = 10 * 1024 * 1024;
 
-  private GalaxyFDSClient fdsClient;
+  private GalaxyFDS fdsClient;
   private GalaxyFDSClient fdsClientAcl;
 
   private String bucketName;
@@ -100,7 +112,13 @@ public class TestGalaxyFDSClient {
   @Before
   public void setUp() throws Exception {
     FDSClientConfiguration fdsConfig = new FDSClientConfiguration(endpoint, false);
+    fdsConfig.setEnableMd5Calculate(true);
+    fdsConfig.setDownloadBandwidth(limitBandwidth);
+    fdsConfig.setUploadBandwidth(limitBandwidth);
+    fdsConfig.enableCdnForUpload(false);
+    fdsConfig.enableCdnForDownload(false);
     fdsClient = new GalaxyFDSClient(credential, fdsConfig);
+    fdsClient = AutoRetryClient.getAutoRetryClient(fdsClient, 3);
     fdsClientAcl = new GalaxyFDSClient(credentialAcl, fdsConfig);
     String methodName = currentTestName.getMethodName();
     bucketName = getBucketName(methodName);
@@ -130,7 +148,7 @@ public class TestGalaxyFDSClient {
     assertTrue(!fdsClient.doesBucketExist(bucketName));
   }
 
-  private void deleteObjectsAndBucket(GalaxyFDSClient client, String bucketName) {
+  private void deleteObjectsAndBucket(GalaxyFDS client, String bucketName) {
     // delete all objects
     try {
       if (client.doesBucketExist(bucketName))
@@ -549,10 +567,15 @@ public class TestGalaxyFDSClient {
     assertEquals(0, summaries.size());
   }
 
+  // Because there a bucketCache in server side, GalaxyFDSClientException.class is not always be thrown out
+  // TODO: Add a magic string into ut's bucket name, and then to judge from server whether this magic string appears
+  @Ignore
   @Test(expected = GalaxyFDSClientException.class, timeout = 120 * 1000)
   public void testListObjWithPrefNoBucket() throws Exception {
     deleteObjectsAndBucket(fdsClient, bucketName);
     bucket2DeleteList.remove(bucketName);
+    boolean b = fdsClient.doesBucketExist(bucketName);
+    assertFalse(b);
     FDSObjectListing fdsObjectListing = fdsClient.listObjects(bucketName, "");
     assertNull(fdsObjectListing);
   }
@@ -818,12 +841,17 @@ public class TestGalaxyFDSClient {
     };
 
     InputStream slowStream = new InputStream() {
+      private long len = 0;
       @Override
       public int read() throws IOException {
         try{
           Thread.sleep(1);
         }
         catch (Exception e){
+        }
+        len++;
+        if(len > testLength ){
+          return -1;
         }
         return (int)'a';
       }
@@ -844,12 +872,15 @@ public class TestGalaxyFDSClient {
     assertEquals(fdsObject.getObjectMetadata().getContentLength(), testLength);
   }
 
-  //@Test
+//  @Test
   public void testPutHugeFile() throws Exception{
     final String objectName = "testPutHugeFile_object";
     // edit it as your file path
-    final String filePath = "/tmp/huge.txt";
+    final String filePath = "/home/huge.txt";
     assertTrue(!fdsClient.doesObjectExist(bucketName, objectName));
+    long startTime = System.currentTimeMillis();
+    long totalSize = 100 * 1024 * 1024;
+    long totalTime = totalSize / limitBandwidth - 5;
 
     ProgressListener listener = new ProgressListener(){
       @Override
@@ -866,6 +897,8 @@ public class TestGalaxyFDSClient {
       .withFile(file)
       .withMetadata(new FDSObjectMetadata())
       .withProgressListener(listener));
+    long uploadTime= System.currentTimeMillis();
+    assertTrue((uploadTime - startTime) / 1000 >= totalTime );
 
     assertEquals(listener.getTransferred(), file.length());
     assertEquals(listener.getTotal(), file.length());
@@ -876,8 +909,23 @@ public class TestGalaxyFDSClient {
 
     String s1 = streamToString(new BufferedInputStream(new FileInputStream(file)));
     String s2 = streamToString(fdsObject.getObjectContent());
-
+    assertEquals(fdsObject.getObjectMetadata().getContentMD5(), DigestUtils.md5Hex(new FileInputStream(file)));
+    long downloadTime = System.currentTimeMillis();
+    assertTrue((downloadTime - uploadTime) / 1000 >= totalTime );
     assertEquals(s1,s2);
+  }
+
+//  @Test
+  public void testAbortInputStream() throws Exception {
+    final String objectName = "testAbortInputStream_object";
+    final String filePath = "/home/300M.bin";
+    File file = new File(filePath);
+    fdsClient.putObject(bucketName, objectName, file);
+    FDSObject object = null;
+    for(int i = 0; i < 30; ++i) {
+      object = fdsClient.getObject(bucketName, objectName);
+      object.getObjectContent().close();
+    }
   }
 
   @Test(timeout = 120 * 1000)
@@ -891,9 +939,10 @@ public class TestGalaxyFDSClient {
       Arrays.fill(partDataArray[i], (byte) i);
     }
 
+    InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucketName, objectName);
 
     final InitMultipartUploadResult result = fdsClient.initMultipartUpload(
-            bucketName, objectName);
+            request);
     Assert.assertNotNull(result);
     String uploadId = result.getUploadId();
 
@@ -918,5 +967,92 @@ public class TestGalaxyFDSClient {
 
   }
 
+  @Test(timeout = 120 * 1000) public void testGzipCompressInputStream() throws Exception {
+    byte[] before = new byte[20 * 1024 * 1024];
+    Arrays.fill(before, (byte) 7);
+    System.out.println("压缩之前大小: " + before.length);
+    InputStream upcompressedIn = new ByteArrayInputStream(before);
 
+    InputStream compressedIn = new GzipCompressingInputStream(upcompressedIn);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    byte[] buf = new byte[256];
+    int n = 0;
+    while ((n = compressedIn.read(buf)) != -1) {
+      baos.write(buf, 0, n);
+    }
+    byte[] after = baos.toByteArray();
+    System.out.println("压缩之后大小: " + after.length);
+  }
+
+  @Test(timeout = 120 * 1000)
+  @Ignore
+  // Because copyObject require HDFS backends,
+  // but backends of test environment always change between HDFS\S3\KS3, So Ignore this test case
+  public void testCopyObject() throws Exception {
+    final String objectName = "testPutObjectRequest_object";
+    final String copiedObjectName = "copied_testPutObjectRequest_object";
+    final String testContent = "test_content";
+
+    final String copiedBucketName = "testcopy";
+    fdsClient.createBucket(copiedBucketName);
+    bucket2DeleteList.add(copiedBucketName);
+    assertTrue(!fdsClient.doesObjectExist(bucketName, objectName));
+
+    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(testContent.getBytes());
+    fdsClient.putObject(bucketName, objectName, byteArrayInputStream, null);
+    assertTrue(fdsClient.doesObjectExist(bucketName, objectName));
+
+    FDSCopyObjectRequest request = new FDSCopyObjectRequest(bucketName, objectName, copiedBucketName, copiedObjectName);
+    CopyObjectResult result = fdsClient.copyObject(request);
+    System.out.println(result.toString());
+
+    assertTrue(fdsClient.doesObjectExist(copiedBucketName, copiedObjectName));
+  }
+
+  @Test(timeout = 120 * 1000)
+  @Ignore
+  public void testSetLifecycle() throws Exception {
+    LifecycleConfig.ActionBase expiration = LifecycleConfig.Expiration.fromJson("{\"days\": 30}");
+
+    LifecycleConfig.Rule rule = new LifecycleConfig.Rule();
+    rule.setId("1");
+    rule.setEnabled(false);
+    rule.setPrefix("img/");
+    rule.setActions(Lists.newArrayList(expiration));
+
+    LifecycleConfig lifecycleConfig = new LifecycleConfig();
+    lifecycleConfig.addOrUpdateRule(rule);
+    fdsClient.updateLifecycleConfig(bucketName, lifecycleConfig);
+  }
+
+  @Test(timeout = 120 * 1000)
+  public void testCORSCongifuration() throws Exception {
+    CORSRule rule1 = new CORSRule();
+    rule1.setAllowedOrigin("*");
+
+    CORSRule rule2 = new CORSRule();
+    rule2.setAllowedOrigin("*.example.com");
+
+    CORSRule[] expectedRules = { rule1, rule2 };
+    CORSConfiguration expectedConfig = new CORSConfiguration();
+    expectedConfig.setRuleList(new ArrayList<CORSRule>(Arrays.asList(expectedRules)));
+    fdsClient.updateBucketCORSConfiguration(bucketName, expectedConfig);
+    CORSConfiguration actualConfig = fdsClient.getBucketCORSConfiguration(bucketName);
+    Assert.assertEquals(actualConfig.getRuleList().size(), expectedConfig.getRuleList().size());
+
+    CORSRule rule3 = new CORSRule();
+    rule3.setAllowedOrigin("http://*.example.com");
+    rule3.setId("1");
+
+    expectedConfig.addOrUpdateRule(rule3);
+    fdsClient.addOrUpdateBucketCORSRule(bucketName, rule3);
+    actualConfig = fdsClient.getBucketCORSConfiguration(bucketName);
+    Assert.assertEquals(actualConfig.getRuleList().size(), expectedConfig.getRuleList().size());
+    for (int i = 0; i < expectedConfig.getRuleList().size(); i++) {
+      Assert.assertTrue(
+          expectedConfig.getRuleList().get(i).equals(actualConfig.getRuleList().get(i)));
+    }
+
+  }
 }

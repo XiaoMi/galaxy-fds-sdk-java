@@ -23,7 +23,10 @@ public class TestRoundRobinResolver {
 
     @Override
     public InetAddress[] resolve(String host) throws UnknownHostException {
-      return NetworkTestUtil.getAllIpAddresses();
+      InetAddress[] res = new InetAddress[2];
+      res[0] = InetAddress.getByName("127.0.0.1");
+      res[1] = InetAddress.getByName("10.23.123.1");
+      return res;
     }
   }
 

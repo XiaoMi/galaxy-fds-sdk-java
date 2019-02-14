@@ -44,6 +44,17 @@ public class FDSClientConfiguration {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
   /**
+   * default part size for putObject
+   */
+  public static final int DEFAULT_PART_SIZE = 10 * 1024 * 1024; //10M;
+
+  /**
+   * default part size for putObject
+   */
+  public static final int DEFAULT_MAX_PART_SIZE = Integer.MAX_VALUE; //10M;
+
+
+  /**
    * interval between service unavailable retry
    */
   public static final int DEFAULT_RETRY_INTERVAL_MILLISEC = 500;
@@ -59,6 +70,16 @@ public class FDSClientConfiguration {
    */
   public static final int DEFAULT_HTTP_KEEP_ALIVE_TIME_MILLISEC= 30 * 1000;
 
+  /**
+   * download bandwidth for getObject
+   */
+  public  static final int DEFAULT_DOWNLOAD_BANDWIDTH = 10 * 1024 * 1024;
+
+  /**
+   *  upload bandwidth for putObject
+   */
+  public  static final int DEFAULT_UPLOAD_BANDWIDTH = 10 * 1024 * 1024;
+
   private String regionName;
   
   private String endpoint;
@@ -72,6 +93,13 @@ public class FDSClientConfiguration {
   private boolean enableUnitTestMode;
   private String baseUriForUnitTest;
 
+  private String proxyHost = null;
+  private int proxyPort = -1;
+  private String proxyUsername = null;
+  private String proxyPassword = null;
+  private String proxyDomain = null;
+  private String proxyWorkstation = null;
+
   private boolean enableMetrics;
   private boolean enableApacheConnector;
   private int connectionTimeoutMs = DEFAULT_CONNECTION_TIMEOUT_MS;
@@ -81,6 +109,9 @@ public class FDSClientConfiguration {
   private int retryCount = DEFAULT_RETRY_COUNT;
   private int retryIntervalMilliSec = DEFAULT_RETRY_INTERVAL_MILLISEC;
   private int ipAddressNegativeDurationMillsec = DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC;
+  private int partSize = DEFAULT_PART_SIZE;
+  private long downloadBandwidth = DEFAULT_DOWNLOAD_BANDWIDTH;
+  private long uploadBandwidth = DEFAULT_UPLOAD_BANDWIDTH;
 
   private long HTTPKeepAliveTimeoutMS = DEFAULT_HTTP_KEEP_ALIVE_TIME_MILLISEC;
 
@@ -103,7 +134,7 @@ public class FDSClientConfiguration {
     baseUriForUnitTest = "";
 
     enableMetrics = false;
-    enableApacheConnector = false;    
+    enableApacheConnector = false;
   }
   
   protected static String getCdnEndpoint(String regionName) {
@@ -124,7 +155,7 @@ public class FDSClientConfiguration {
     }
     this.regionName = host.substring(0, host.length() - uriSuffix.length());
   }
-  
+
   public void setEndpoint(String endpoint) {
     Preconditions.checkNotNull(endpoint);
     this.endpoint = endpoint;
@@ -347,6 +378,35 @@ public class FDSClientConfiguration {
     this.batchDeleteSize = size;
   }
 
+  public void setPartSize(int partSize){
+    Preconditions.checkArgument(partSize > 0, "partSize should be positive, got" + partSize);
+    Preconditions.checkArgument(partSize <= DEFAULT_MAX_PART_SIZE,
+        "partSize should <= " + DEFAULT_MAX_PART_SIZE + "got " + partSize);
+    this.partSize = partSize;
+  }
+
+  public int getPartSize(){
+    return partSize;
+  }
+
+  public void setDownloadBandwidth(long downloadBandwidth){
+    Preconditions.checkArgument(downloadBandwidth > 0, "downloadBandwidth should be positive, got" + downloadBandwidth);
+    this.downloadBandwidth = downloadBandwidth;
+  }
+
+  public long getDownloadBandwidth(){
+    return downloadBandwidth;
+  }
+
+  public void setUploadBandwidth(long uploadBandwidth){
+    Preconditions.checkArgument(uploadBandwidth > 0, "uploadBandwidth should be positive, got" + uploadBandwidth);
+    this.uploadBandwidth = uploadBandwidth;
+  }
+
+  public long getUploadBandwidth(){
+    return uploadBandwidth;
+  }
+
   /**
    * get items deleted each round in deleteObjects
    * @return
@@ -387,4 +447,51 @@ public class FDSClientConfiguration {
     this.HTTPKeepAliveTimeoutMS = HTTPConnectionTimeoutMS;
   }
 
+  public String getProxyHost() {
+    return proxyHost;
+  }
+
+  public void setProxyHost(String proxyHost) {
+    this.proxyHost = proxyHost;
+  }
+
+  public int getProxyPort() {
+    return proxyPort;
+  }
+
+  public void setProxyPort(int proxyPort) {
+    this.proxyPort = proxyPort;
+  }
+
+  public String getProxyUsername() {
+    return proxyUsername;
+  }
+
+  public void setProxyUsername(String proxyUsername) {
+    this.proxyUsername = proxyUsername;
+  }
+
+  public String getProxyPassword() {
+    return proxyPassword;
+  }
+
+  public void setProxyPassword(String proxyPassword) {
+    this.proxyPassword = proxyPassword;
+  }
+
+  public String getProxyDomain() {
+    return proxyDomain;
+  }
+
+  public void setProxyDomain(String proxyDomain) {
+    this.proxyDomain = proxyDomain;
+  }
+
+  public String getProxyWorkstation() {
+    return proxyWorkstation;
+  }
+
+  public void setProxyWorkstation(String proxyWorkstation) {
+    this.proxyWorkstation = proxyWorkstation;
+  }
 }

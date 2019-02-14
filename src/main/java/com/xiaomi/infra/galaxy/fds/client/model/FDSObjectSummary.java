@@ -10,6 +10,7 @@ public class FDSObjectSummary {
   private String objectName;
   private Owner owner;
   private long size;
+  private long uploadTime;
 
   public String getBucketName() {
     return bucketName;
@@ -41,5 +42,23 @@ public class FDSObjectSummary {
 
   public void setSize(long size) {
     this.size = size;
+  }
+
+  public long getUploadTime() {
+    return uploadTime;
+  }
+
+  public void setUploadTime(long uploadTime) {
+    this.uploadTime = uploadTime;
+  }
+
+  @Override public String toString() {
+    return "FDSObjectSummary{" +
+        "bucketName='" + bucketName + '\'' +
+        ", objectName='" + objectName + '\'' +
+        ", owner=" + owner +
+        ", size=" + size +
+        ", uploadTime=" + uploadTime +
+        '}';
   }
 }

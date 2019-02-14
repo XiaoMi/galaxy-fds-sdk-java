@@ -17,6 +17,7 @@ public class FDSObjectListing {
   private String nextMarker;
   private int maxKeys;
   private boolean truncated;
+  private boolean reverse;
   private List<FDSObjectSummary> objectSummaries;
 
   private List<String> commonPrefixes;
@@ -91,5 +92,13 @@ public class FDSObjectListing {
 
   public void setCommonPrefixes(List<String> commonPrefixes) {
     this.commonPrefixes = commonPrefixes;
+  }
+
+  public boolean isReverse() {
+    return reverse;
+  }
+
+  public void setReverse(boolean reverse) {
+    this.reverse = reverse;
   }
 }

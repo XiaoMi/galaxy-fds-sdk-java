@@ -1,6 +1,7 @@
 package com.xiaomi.infra.galaxy.fds.client.model;
 
 import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
+import com.xiaomi.infra.galaxy.fds.model.StorageClass;
 
 import java.io.*;
 
@@ -39,6 +40,11 @@ public class FDSPutObjectRequest {
 	 * progress listener for monitoring object upload status
 	 */
 	private ProgressListener progressListener;
+
+	/**
+	 * fds storage class
+	 */
+	private String storageClass;
 
 	public FDSPutObjectRequest(){}
 
@@ -85,6 +91,18 @@ public class FDSPutObjectRequest {
 	public FDSPutObjectRequest withObjectName(String objectName) {
 		this.setObjectName(objectName);
 		return this;
+	}
+
+	public String getStorageClass() {
+		return storageClass;
+	}
+
+	public void setStorageClass(StorageClass storageClass) {
+		if (storageClass != null){
+			this.storageClass = storageClass.toString();
+		} else {
+			this.storageClass = null;
+		}
 	}
 
 	public InputStream getInputStream() {
@@ -142,6 +160,11 @@ public class FDSPutObjectRequest {
 	 */
 	public FDSPutObjectRequest withFile(File file) throws FileNotFoundException{
 		this.setFile(file);
+		return this;
+	}
+
+	public FDSPutObjectRequest withStorageClass(StorageClass storageClass){
+		this.setStorageClass(storageClass);
 		return this;
 	}
 
