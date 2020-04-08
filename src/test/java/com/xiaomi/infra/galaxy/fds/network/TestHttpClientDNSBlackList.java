@@ -72,7 +72,7 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
     defaultFdsConfig.setEndpoint(INTERNAL_SITE);
     localIpAddress = NetworkTestUtil.getAllIpAddresses();
     dnsResolvedCnt = 0;
-    this.ipBlackList.clear();
+    getFdsHttpClient().getIpBlackList().clear();
   }
 
   @Test (timeout = 120 * 1000)
@@ -83,7 +83,7 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
       createBucket(bucketName);
       Assert.fail("Duplicated bucket");
     } catch (Exception e) {
-      Assert.assertTrue(this.ipBlackList.isEmpty());
+      Assert.assertTrue(this.getFdsHttpClient().getIpBlackList().isEmpty());
     }
   }
 
@@ -94,7 +94,7 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
       Assert.fail();
     } catch (Exception e) {
       Assert.assertEquals(Math.min(localIpAddress.length, 1 + defaultFdsConfig.getRetryCount()),
-          this.ipBlackList.size());
+          this.getFdsHttpClient().getIpBlackList().size());
     }
   }
 
@@ -106,11 +106,11 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
       Assert.fail();
     } catch (Exception e) {
       String ipAddressStr = localIpAddress[0].getHostAddress();
-      Assert.assertTrue(this.ipBlackList.inList(ipAddressStr));
+      Assert.assertTrue(this.getFdsHttpClient().getIpBlackList().inList(ipAddressStr));
       Thread.sleep(FDSClientConfiguration.DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC / 2);
-      Assert.assertTrue(this.ipBlackList.inList(ipAddressStr));
+      Assert.assertTrue(this.getFdsHttpClient().getIpBlackList().inList(ipAddressStr));
       Thread.sleep(FDSClientConfiguration.DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC);
-      Assert.assertFalse(this.ipBlackList.inList(ipAddressStr));
+      Assert.assertFalse(this.getFdsHttpClient().getIpBlackList().inList(ipAddressStr));
     }
   }
 
@@ -199,7 +199,8 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
       createBucket("test-bucket");
     } catch (Exception e) {
       Assert.assertEquals(FDSClientConfiguration.DEFAULT_RETRY_COUNT + 1, dnsResolvedCnt);
-      Assert.assertTrue(this.ipBlackList.inList(this.localIpAddress[0].getHostAddress()));
+      Assert.assertTrue(this.getFdsHttpClient().getIpBlackList().inList(
+          this.localIpAddress[0].getHostAddress()));
     }
   }
 
@@ -218,8 +219,8 @@ public class TestHttpClientDNSBlackList extends GalaxyFDSClient {
       }
     }
 
-    boolean a = this.ipBlackList.inList(localIpAddress[0].getHostAddress());
-    boolean b = this.ipBlackList.inList(localIpAddress[1].getHostAddress());
+    boolean a = this.getFdsHttpClient().getIpBlackList().inList(localIpAddress[0].getHostAddress());
+    boolean b = this.getFdsHttpClient().getIpBlackList().inList(localIpAddress[1].getHostAddress());
     Assert.assertTrue(a || b);
   }
 }

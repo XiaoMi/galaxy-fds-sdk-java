@@ -1,5 +1,7 @@
 package com.xiaomi.infra.galaxy.fds.client.model;
 
+import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
+
 /**
  * Contains the summary of an object stored in a Galaxy FDS bucket. This object
  * doesn't contain the object's full metadata or any of its contents.
@@ -11,6 +13,7 @@ public class FDSObjectSummary {
   private Owner owner;
   private long size;
   private long uploadTime;
+  private FDSObjectMetadata metadata;
 
   public String getBucketName() {
     return bucketName;
@@ -50,6 +53,14 @@ public class FDSObjectSummary {
 
   public void setUploadTime(long uploadTime) {
     this.uploadTime = uploadTime;
+  }
+
+  public FDSObjectMetadata getMetadata() {
+    return metadata;
+  }
+
+  public void setMetadata(FDSObjectMetadata metadata) {
+    this.metadata = metadata;
   }
 
   @Override public String toString() {

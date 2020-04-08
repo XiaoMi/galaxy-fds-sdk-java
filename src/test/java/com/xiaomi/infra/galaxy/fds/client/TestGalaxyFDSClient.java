@@ -65,6 +65,7 @@ import static org.junit.Assert.fail;
 import com.xiaomi.infra.galaxy.fds.model.CORSConfiguration;
 import com.xiaomi.infra.galaxy.fds.model.CORSConfiguration.CORSRule;
 
+@Ignore
 public class TestGalaxyFDSClient {
 
   private static final Log LOG = LogFactory.getLog(GalaxyFDSClient.class);

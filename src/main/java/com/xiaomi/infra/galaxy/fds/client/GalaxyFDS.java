@@ -22,6 +22,7 @@ import com.xiaomi.infra.galaxy.fds.model.AccessLogConfig;
 import com.xiaomi.infra.galaxy.fds.model.FDSObjectMetadata;
 import com.xiaomi.infra.galaxy.fds.model.HttpMethod;
 import com.xiaomi.infra.galaxy.fds.model.LifecycleConfig;
+import com.xiaomi.infra.galaxy.fds.model.StorageClass;
 import com.xiaomi.infra.galaxy.fds.model.ThirdPartyObject;
 import com.xiaomi.infra.galaxy.fds.model.TimestampAntiStealingLinkConfig;
 import com.xiaomi.infra.galaxy.fds.result.CopyObjectResult;
@@ -62,6 +63,15 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   void createBucket(String bucketName) throws GalaxyFDSClientException;
+
+  /**
+   * Creates a new fds bucket with the specified name.
+   *
+   * @param bucketName   The name of the bucket to create
+   * @param storageClass Default storage class of objects in the bucket
+   * @throws GalaxyFDSClientException
+   */
+  void createBucket(String bucketName, StorageClass storageClass) throws GalaxyFDSClientException;
 
   /**
    * Creates a new fds bucket with the specified name.
@@ -659,6 +669,19 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
+   * Restore archived object during a certain period of time.
+   * When restored request submitted, FDS will try to restore the archived object and
+   * create a readable temporary backup, which will take several minutes to hours.
+   * After restored, it can be read as standard object.
+   * The backup will be deleted after several days. Call restoreArchivedObject again will extend the lease.
+   *
+   * @param bucketName
+   * @param objectName
+   * @throws GalaxyFDSClientException
+   */
+  void restoreArchivedObject(String bucketName, String objectName) throws GalaxyFDSClientException;
+
+  /**
    * Rename the object with the specified name under the specified bucket.
    *
    * @param bucketName    The name of the bucket where the object stores
@@ -679,6 +702,15 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
+   * prefetch a FDS CDN URI
+   * @param bucketName bucket name
+   * @param objectName object name
+   * @param cdnUri cdn URI
+   * @return rest refresh quota
+   */
+  long prefetchUri(String bucketName, String objectName, String cdnUri) throws GalaxyFDSClientException;
+
+  /**
    * Refresh the object cached in cdn. The object must have public access
    * @param bucketName The name of the bucket where the object stores
    * @param objectName The name of the object to refresh
@@ -686,6 +718,15 @@ public interface GalaxyFDS {
    */
   long refreshObject(String bucketName, String objectName)
       throws GalaxyFDSClientException;
+
+  /**
+   * refresh a FDS CDN URI
+   * @param bucketName bucket name
+   * @param objectName object name
+   * @param cdnUri cdn URI
+   * @return rest refresh quota
+   */
+  long refreshUri(String bucketName, String objectName, String cdnUri) throws GalaxyFDSClientException;
 
   /**
    * Add a domain mapping for the specified bucket.
@@ -959,6 +1000,20 @@ public interface GalaxyFDS {
       throws GalaxyFDSClientException;
 
   /**
+   * Upload a part
+   * @param bucketName
+   * @param objectName
+   * @param uploadId     The uploadId of this multipart upload
+   * @param partNumber   The part number of this part
+   * @param in           The inputStream of this part
+   * @param metadata     The meta of this part
+   * @return
+   * @throws GalaxyFDSClientException
+   */
+  UploadPartResult uploadPart(String bucketName, String objectName, String uploadId, int partNumber,
+      InputStream in, FDSObjectMetadata metadata) throws GalaxyFDSClientException;
+
+  /**
    * Complete the multipart upload.
    * @param bucketName
    * @param objectName
@@ -1027,12 +1082,22 @@ public interface GalaxyFDS {
 
   /**
    * Migrate bucket to new eco authentication
-   * @param bucketName
+   * @param bucketName bucket name
    * @param orgId, new eco orgId
    * @param teamId, this teamId will be grant full control
    * @throws GalaxyFDSClientException
    */
   void migrateBucket(String bucketName, String orgId, String teamId)
+      throws GalaxyFDSClientException;
+
+  /**
+   * transfer owner id of bucket
+   * @param bucketName bucket name
+   * @param orgId new org id
+   * @param teamId new team id
+   * @throws GalaxyFDSClientException exception
+   */
+  void migrateBucketV2(String bucketName, String orgId, String teamId)
       throws GalaxyFDSClientException;
 
   void setMirror(String bucketName, String mirrorAddress)
@@ -1079,8 +1144,15 @@ public interface GalaxyFDS {
   FDSObject getObjectFromThirdParty(String bucketName, String objectName, long pos)
       throws GalaxyFDSClientException;
 
-  void setDefaultGifExtractType(String bucketName, String type)
-      throws GalaxyFDSClientException;
-
-  String getDefaultGifExtractType(String bucketName) throws GalaxyFDSClientException;
+  /**
+   * update object metadata, including:
+   * 1.cache-control
+   * 2.content-type
+   * 3.user defined meta
+   * @param bucketName
+   * @param objectName
+   * @param metadata
+   * @throws GalaxyFDSClientException
+   */
+  void setObjectMetadata(String bucketName, String objectName, FDSObjectMetadata metadata) throws GalaxyFDSClientException;
 }

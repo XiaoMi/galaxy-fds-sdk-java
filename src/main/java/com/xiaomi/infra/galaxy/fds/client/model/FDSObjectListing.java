@@ -18,6 +18,7 @@ public class FDSObjectListing {
   private int maxKeys;
   private boolean truncated;
   private boolean reverse;
+  private boolean withMetaData;
   private List<FDSObjectSummary> objectSummaries;
 
   private List<String> commonPrefixes;
@@ -100,5 +101,13 @@ public class FDSObjectListing {
 
   public void setReverse(boolean reverse) {
     this.reverse = reverse;
+  }
+
+  public boolean isWithMetaData() {
+    return withMetaData;
+  }
+
+  public void setWithMetaData(boolean withMetaData) {
+    this.withMetaData = withMetaData;
   }
 }

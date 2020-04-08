@@ -108,10 +108,26 @@ public class FDSClientConfiguration {
   private int batchDeleteSize = DEFAULT_MAX_BATCH_DELETE_SIZE;
   private int retryCount = DEFAULT_RETRY_COUNT;
   private int retryIntervalMilliSec = DEFAULT_RETRY_INTERVAL_MILLISEC;
+  private boolean enablePreRead = false;
+  private long preReadBufferSize = 160 * 1024 * 1024; // 160MB
+  private int preReadPartNum = 3;
+  private int preReadPoolSize = 16;
+  private int preReadQueueSize = 16;
+  private int preReadPartSize = 10 * 1024 * 1024;
+
+  public String getUserAgent() {
+    return userAgent;
+  }
+
+  public void setUserAgent(String userAgent) {
+    this.userAgent = userAgent;
+  }
+
   private int ipAddressNegativeDurationMillsec = DEFAULT_IP_ADDRESS_NEGATIVE_DURATION_MILLISEC;
   private int partSize = DEFAULT_PART_SIZE;
   private long downloadBandwidth = DEFAULT_DOWNLOAD_BANDWIDTH;
   private long uploadBandwidth = DEFAULT_UPLOAD_BANDWIDTH;
+  private String userAgent = null;
 
   private long HTTPKeepAliveTimeoutMS = DEFAULT_HTTP_KEEP_ALIVE_TIME_MILLISEC;
 
@@ -493,5 +509,53 @@ public class FDSClientConfiguration {
 
   public void setProxyWorkstation(String proxyWorkstation) {
     this.proxyWorkstation = proxyWorkstation;
+  }
+
+  public boolean isEnablePreRead() {
+    return enablePreRead;
+  }
+
+  public void setEnablePreRead(boolean enablePreRead) {
+    this.enablePreRead = enablePreRead;
+  }
+
+  public long getPreReadBufferSize() {
+    return preReadBufferSize;
+  }
+
+  public void setPreReadBufferSize(long preReadBufferSize) {
+    this.preReadBufferSize = preReadBufferSize;
+  }
+
+  public int getPreReadPartNum() {
+    return preReadPartNum;
+  }
+
+  public void setPreReadPartNum(int preReadPartNum) {
+    this.preReadPartNum = preReadPartNum;
+  }
+
+  public int getPreReadPoolSize() {
+    return preReadPoolSize;
+  }
+
+  public void setPreReadPoolSize(int preReadPoolSize) {
+    this.preReadPoolSize = preReadPoolSize;
+  }
+
+  public int getPreReadQueueSize() {
+    return preReadQueueSize;
+  }
+
+  public void setPreReadQueueSize(int preReadQueueSize) {
+    this.preReadQueueSize = preReadQueueSize;
+  }
+
+  public int getPreReadPartSize() {
+    return preReadPartSize;
+  }
+
+  public void setPreReadPartSize(int preReadPartSize) {
+    this.preReadPartSize = preReadPartSize;
   }
 }

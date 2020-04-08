@@ -1,8 +1,8 @@
 package com.xiaomi.infra.galaxy.fds.client.model;
 
-import com.sun.corba.se.spi.orbutil.fsm.Input;
-
-import java.io.*;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Created by maxiaoxin on 17-6-21.
