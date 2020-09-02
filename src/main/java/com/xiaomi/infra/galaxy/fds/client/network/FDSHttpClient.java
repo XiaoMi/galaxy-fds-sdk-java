@@ -12,6 +12,9 @@ import com.xiaomi.infra.galaxy.fds.auth.signature.Signer;
 import com.xiaomi.infra.galaxy.fds.auth.signature.XiaomiHeader;
 import com.xiaomi.infra.galaxy.fds.client.FDSClientConfiguration;
 import com.xiaomi.infra.galaxy.fds.client.GalaxyFDSClient;
+import com.xiaomi.infra.galaxy.fds.client.auth.Authentication;
+import com.xiaomi.infra.galaxy.fds.client.auth.KerberosAuthentication;
+import com.xiaomi.infra.galaxy.fds.client.auth.SignerAuthentication;
 import com.xiaomi.infra.galaxy.fds.client.credential.GalaxyFDSCredential;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
 import com.xiaomi.infra.galaxy.fds.client.filter.FDSClientLogFilter;
@@ -63,8 +66,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -102,6 +107,10 @@ public class FDSHttpClient {
   private MetricsCollector metricsCollector;
   private final GalaxyFDSClient fdsClient;
 
+  private Authentication authentication;
+  private final String KERBEROS_AUTHORIZATION_PATH = "/fds-kerberos-auth";
+
+
   public static SignAlgorithm SIGN_ALGORITHM = SignAlgorithm.HmacSHA1;
   public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
       "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
@@ -129,6 +138,22 @@ public class FDSHttpClient {
     this.httpClient = createHttpClient(fdsConfig);
     if (fdsConfig.isMetricsEnabled()) {
       metricsCollector = new MetricsCollector(fdsClient);
+    }
+
+    switch (credential.getAuthType()){
+      case SIGNER:
+        authentication = new SignerAuthentication(credential);
+        break;
+      case KERBEROS:
+        try {
+          authentication = new KerberosAuthentication(credential,
+            new URL(fdsConfig.getBaseUri() + KERBEROS_AUTHORIZATION_PATH));
+        } catch (MalformedURLException e){
+          throw new RuntimeException("fail to init kerberos authorization", e);
+        }
+        break;
+      default:
+        throw new RuntimeException("Invalid auth type");
     }
   }
 
@@ -235,29 +260,29 @@ public class FDSHttpClient {
 
     HttpUriRequest httpRequest;
     switch (method) {
-    case PUT:
-      HttpPut httpPut = new HttpPut(uri);
-      if (requestEntity != null)
-        httpPut.setEntity(requestEntity);
-      httpRequest = httpPut;
-      break;
-    case GET:
-      httpRequest = new HttpGet(uri);
-      break;
-    case DELETE:
-      httpRequest = new HttpDelete(uri);
-      break;
-    case HEAD:
-      httpRequest = new HttpHead(uri);
-      break;
-    case POST:
-      HttpPost httpPost = new HttpPost(uri);
-      if (requestEntity != null)
-        httpPost.setEntity(requestEntity);
-      httpRequest = httpPost;
-      break;
-    default:
-      throw new GalaxyFDSClientException("Method " + method.name() +
+      case PUT:
+        HttpPut httpPut = new HttpPut(uri);
+        if (requestEntity != null)
+          httpPut.setEntity(requestEntity);
+        httpRequest = httpPut;
+        break;
+      case GET:
+        httpRequest = new HttpGet(uri);
+        break;
+      case DELETE:
+        httpRequest = new HttpDelete(uri);
+        break;
+      case HEAD:
+        httpRequest = new HttpHead(uri);
+        break;
+      case POST:
+        HttpPost httpPost = new HttpPost(uri);
+        if (requestEntity != null)
+          httpPost.setEntity(requestEntity);
+        httpRequest = httpPost;
+        break;
+      default:
+        throw new GalaxyFDSClientException("Method " + method.name() +
           " not supported");
     }
     for (Map.Entry<String, List<Object>> header : headers.entrySet()) {
@@ -271,6 +296,7 @@ public class FDSHttpClient {
         httpRequest.addHeader(header.getKey(), obj.toString());
       }
     }
+    authentication.authentication(httpRequest);
 
     return httpRequest;
   }
@@ -296,28 +322,6 @@ public class FDSHttpClient {
 
     // Set unique request id
     headers.put(XiaomiHeader.REQUEST_ID.getName(), getUniqueRequestId());
-
-    // Set authorization information
-    String signature;
-    try {
-      URI relativeUri = new URI(uri.toString().substring(
-          uri.toString().indexOf('/', uri.toString().indexOf(':') + 3)));
-      signature = Signer
-          .signToBase64(method, relativeUri, headers, credential.getGalaxyAccessSecret(),
-              SIGN_ALGORITHM);
-    } catch (InvalidKeyException e) {
-      LOG.error("Invalid secret key spec", e);
-      throw new GalaxyFDSClientException("Invalid secret key sepc", e);
-    } catch (NoSuchAlgorithmException e) {
-      LOG.error("Unsupported signature algorithm:" + SIGN_ALGORITHM, e);
-      throw new GalaxyFDSClientException("Unsupported signature slgorithm:"
-          + SIGN_ALGORITHM, e);
-    } catch (Exception e) {
-      throw new GalaxyFDSClientException(e);
-    }
-    String authString = "Galaxy-V2 " + credential.getGalaxyAccessId() + ":"
-        + signature;
-    headers.put(Common.AUTHORIZATION, authString);
 
     Map<String, Object> httpHeaders = new HashMap<String, Object>();
     for (Map.Entry<String, String> entry : headers.entries()) {

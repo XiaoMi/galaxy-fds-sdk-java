@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
@@ -33,6 +34,8 @@ import com.google.gson.JsonParseException;
 import com.xiaomi.infra.galaxy.fds.bean.MetadataBean;
 import com.xiaomi.infra.galaxy.fds.bean.ThirdPartyObjectBean;
 
+import com.xiaomi.infra.galaxy.fds.client.auth.KerberosAuthentication;
+import com.xiaomi.infra.galaxy.fds.client.auth.SignerAuthentication;
 import com.xiaomi.infra.galaxy.fds.client.model.InitiateMultipartUploadRequest;
 import com.xiaomi.infra.galaxy.fds.client.network.FDSHttpClient;
 import com.xiaomi.infra.galaxy.fds.model.StorageClass;

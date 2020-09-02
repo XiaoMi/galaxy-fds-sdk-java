@@ -1050,9 +1050,8 @@ public class TestGalaxyFDSClient {
     fdsClient.addOrUpdateBucketCORSRule(bucketName, rule3);
     actualConfig = fdsClient.getBucketCORSConfiguration(bucketName);
     Assert.assertEquals(actualConfig.getRuleList().size(), expectedConfig.getRuleList().size());
-    for (int i = 0; i < expectedConfig.getRuleList().size(); i++) {
-      Assert.assertTrue(
-          expectedConfig.getRuleList().get(i).equals(actualConfig.getRuleList().get(i)));
+    for (CORSRule expectedRule : expectedConfig.getRuleList()) {
+      Assert.assertTrue(expectedRule.getAllowedOrigin().equals(actualConfig.getRuleById(expectedRule.getId()).getAllowedOrigin()));
     }
 
   }

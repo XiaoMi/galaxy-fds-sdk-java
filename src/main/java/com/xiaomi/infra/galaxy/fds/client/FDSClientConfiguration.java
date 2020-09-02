@@ -264,7 +264,7 @@ public class FDSClientConfiguration {
     this.baseUriForUnitTest = baseUriForUnitTest;
   }
 
-  String getBaseUri() {
+  public String getBaseUri() {
     return buildBaseUri(false);
   }
 

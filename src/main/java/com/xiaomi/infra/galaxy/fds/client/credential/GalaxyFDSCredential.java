@@ -7,4 +7,12 @@ public interface GalaxyFDSCredential {
   String getGalaxyAccessId();
 
   String getGalaxyAccessSecret();
+
+  String getClientPrincipal();
+
+  String getServerPincipal();
+
+  String getKeyTabFile();
+
+  BasicFDSCredential.AuthType getAuthType();
 }
