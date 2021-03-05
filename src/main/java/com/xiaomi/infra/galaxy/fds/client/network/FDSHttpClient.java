@@ -110,14 +110,17 @@ public class FDSHttpClient {
   private Authentication authentication;
   private final String KERBEROS_AUTHORIZATION_PATH = "/fds-kerberos-auth";
 
-
   public static SignAlgorithm SIGN_ALGORITHM = SignAlgorithm.HmacSHA1;
-  public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-      "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-
-  static {
-    DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("GMT"));
-  }
+  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+    new ThreadLocal<SimpleDateFormat>() {
+      @Override
+      protected SimpleDateFormat initialValue() {
+        SimpleDateFormat format = new SimpleDateFormat(
+          "EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+        format.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return format;
+      }
+    };
 
 
   public FDSHttpClient(FDSClientConfiguration fdsConfig, GalaxyFDSCredential credential,
@@ -228,6 +231,7 @@ public class FDSHttpClient {
             fdsBlackListEnabledHostChecker))
         .setConnectionManager(connectionManager)
         .setDefaultRequestConfig(requestConfig)
+        .disableContentCompression()
         .build();
   }
 
@@ -313,7 +317,7 @@ public class FDSHttpClient {
     }
 
     // Format date
-    String date = DATE_FORMAT.format(new Date());
+    String date = DATE_FORMAT.get().format(new Date());
     headers.put(Common.DATE, date);
 
     // Set content type
@@ -345,7 +349,7 @@ public class FDSHttpClient {
     HttpEntity httpEntity = response.getEntity();
     int statusCode = response.getStatusLine().getStatusCode();
     try {
-      if (statusCode == HttpStatus.SC_OK) {
+      if (statusCode == HttpStatus.SC_OK || statusCode == HttpStatus.SC_ACCEPTED) {
         if (c != null) {
           Gson gson;
           if (deserializer != null) {

@@ -13,6 +13,7 @@ import com.xiaomi.infra.galaxy.fds.bean.BucketBean;
 import com.xiaomi.infra.galaxy.fds.client.exception.GalaxyFDSClientException;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSBucket;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSCopyObjectRequest;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSListObjectsRequest;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObject;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSObjectListing;
 import com.xiaomi.infra.galaxy.fds.client.model.FDSPutObjectRequest;
@@ -25,6 +26,7 @@ import com.xiaomi.infra.galaxy.fds.model.LifecycleConfig;
 import com.xiaomi.infra.galaxy.fds.model.StorageClass;
 import com.xiaomi.infra.galaxy.fds.model.ThirdPartyObject;
 import com.xiaomi.infra.galaxy.fds.model.TimestampAntiStealingLinkConfig;
+import com.xiaomi.infra.galaxy.fds.model.WebsiteConfig;
 import com.xiaomi.infra.galaxy.fds.result.CopyObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
 import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
@@ -258,6 +260,16 @@ public interface GalaxyFDS {
    */
   FDSObjectListing listObjects(String bucketName, String prefix,
                                       String delimiter, boolean reverse, boolean isBackup) throws GalaxyFDSClientException;
+
+  /**
+   * Return a list of summary information about the versions in the specified bucket
+   * @param listObjectsRequest
+   *            The request object containing all options for listing the
+   *            objects in a specified bucket.
+   * @return listing result
+   * @throws GalaxyFDSClientException exception
+   */
+  FDSObjectListing listObjects(FDSListObjectsRequest listObjectsRequest) throws GalaxyFDSClientException;
 
   /**
    * Returns a list of summary information about the objects in the specified bucket.
@@ -728,41 +740,6 @@ public interface GalaxyFDS {
    */
   long refreshUri(String bucketName, String objectName, String cdnUri) throws GalaxyFDSClientException;
 
-  /**
-   * Add a domain mapping for the specified bucket.
-   * @param bucketName
-   * @param domainName
-   * @throws GalaxyFDSClientException
-   */
-  void putDomainMapping(String bucketName, String domainName)
-      throws GalaxyFDSClientException;
-
-  /**
-   * Add a domain mapping for the specified bucket.
-   * @param bucketName
-   * @param domainName
-   * @param indexName
-   * @throws GalaxyFDSClientException
-   */
-  void putDomainMapping(String bucketName, String domainName, String indexName)
-      throws GalaxyFDSClientException;
-
-  /**
-   * Get all domains mapped to the specified bucket.
-   * @param bucketName
-   * @throws GalaxyFDSClientException
-   */
-  List<String> listDomainMappings(String bucketName)
-      throws GalaxyFDSClientException;
-
-  /**
-   * Delete the specified domain mapping for the specified bucket.
-   * @param bucketName
-   * @throws GalaxyFDSClientException
-   */
-  void deleteDomainMapping(String bucketName, String domainName)
-      throws GalaxyFDSClientException;
-
 
   void cropImage(String bucketName, String objectName, int x, int y, int w, int h)
       throws GalaxyFDSClientException;
@@ -1100,6 +1077,25 @@ public interface GalaxyFDS {
   void migrateBucketV2(String bucketName, String orgId, String teamId)
       throws GalaxyFDSClientException;
 
+  /**
+   * set if bucket allows outside access
+   * @param bucketName
+   * @param allowOutsideAccess
+   * @throws GalaxyFDSClientException
+   */
+  void setBucketOutsideAccess(String bucketName, boolean allowOutsideAccess)
+      throws GalaxyFDSClientException;
+
+  /**
+   * set if object allows outside access
+   * @param bucketName bucket name
+   * @param objectName object name
+   * @param allowOutsideAccess
+   * @throws GalaxyFDSClientException
+   */
+  void setObjectOutsideAccess(String bucketName, String objectName, boolean allowOutsideAccess)
+      throws GalaxyFDSClientException;
+
   void setMirror(String bucketName, String mirrorAddress)
       throws GalaxyFDSClientException;
 
@@ -1155,4 +1151,10 @@ public interface GalaxyFDS {
    * @throws GalaxyFDSClientException
    */
   void setObjectMetadata(String bucketName, String objectName, FDSObjectMetadata metadata) throws GalaxyFDSClientException;
+
+  void updateWebsiteConfig(String bucketName, WebsiteConfig websiteConfig) throws GalaxyFDSClientException;
+
+  void deleteWebsiteConfig(String bucketName) throws GalaxyFDSClientException;
+
+  WebsiteConfig getWebsiteConfig(final String bucketName) throws GalaxyFDSClientException;
 }

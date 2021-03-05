@@ -36,6 +36,7 @@ import com.xiaomi.infra.galaxy.fds.bean.ThirdPartyObjectBean;
 
 import com.xiaomi.infra.galaxy.fds.client.auth.KerberosAuthentication;
 import com.xiaomi.infra.galaxy.fds.client.auth.SignerAuthentication;
+import com.xiaomi.infra.galaxy.fds.client.model.FDSListObjectsRequest;
 import com.xiaomi.infra.galaxy.fds.client.model.InitiateMultipartUploadRequest;
 import com.xiaomi.infra.galaxy.fds.client.network.FDSHttpClient;
 import com.xiaomi.infra.galaxy.fds.model.StorageClass;
@@ -50,19 +51,18 @@ import com.xiaomi.infra.galaxy.fds.client.model.FDSPutObjectRequest;
 import com.xiaomi.infra.galaxy.fds.client.model.Owner;
 import com.xiaomi.infra.galaxy.fds.model.ThirdPartyObject;
 import com.xiaomi.infra.galaxy.fds.model.TimestampAntiStealingLinkConfig;
+import com.xiaomi.infra.galaxy.fds.model.WebsiteConfig;
 import com.xiaomi.infra.galaxy.fds.result.AccessControlPolicy;
 import com.xiaomi.infra.galaxy.fds.result.CopyObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.InitMultipartUploadResult;
 import com.xiaomi.infra.galaxy.fds.result.ListAllAuthorizedBucketsResult;
 import com.xiaomi.infra.galaxy.fds.result.ListAllBucketsResult;
-import com.xiaomi.infra.galaxy.fds.result.ListDomainMappingsResult;
 import com.xiaomi.infra.galaxy.fds.result.ListObjectsResult;
 import com.xiaomi.infra.galaxy.fds.result.PutObjectResult;
 import com.xiaomi.infra.galaxy.fds.result.QuotaPolicy;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResult;
 import com.xiaomi.infra.galaxy.fds.result.UploadPartResultList;
 import com.xiaomi.infra.galaxy.fds.result.VersionListing;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -130,7 +130,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
     retryMethodSet.add("getLifecycleConfig");
     retryMethodSet.add("listAuthorizedBuckets");
     retryMethodSet.add("listBuckets");
-    retryMethodSet.add("listDomainMappings");
     retryMethodSet.add("getMirror");
     retryMethodSet.add("listNextBatchOfVersions");
     retryMethodSet.add("listVersions");
@@ -138,17 +137,18 @@ public class GalaxyFDSClient implements GalaxyFDS {
     retryMethodSet.add("doesObjectExist");
     retryMethodSet.add("prefetchObject");
     retryMethodSet.add("refreshObject");
-    retryMethodSet.add("deleteDomainMapping");
     retryMethodSet.add("deleteMirror");
     retryMethodSet.add("deleteObjectAcl");
     retryMethodSet.add("getBucket");
-    retryMethodSet.add("putDomainMapping");
     retryMethodSet.add("setBucketAcl");
     retryMethodSet.add("setMirror");
     retryMethodSet.add("setObjectAcl");
     retryMethodSet.add("setPublic");
     retryMethodSet.add("updateAccessLogConfig");
     retryMethodSet.add("updateLifecycleConfig");
+    retryMethodSet.add("updateWebsiteConfig");
+    retryMethodSet.add("getWebsiteConfig");
+    retryMethodSet.add("deleteWebsiteConfig");
   }
 
   private static final Log LOG = LogFactory.getLog(GalaxyFDSClient.class);
@@ -467,20 +467,34 @@ public class GalaxyFDSClient implements GalaxyFDS {
   @Override
   public FDSObjectListing listObjects(String bucketName, String prefix, String delimiter,
       boolean reverse, boolean isBackup) throws GalaxyFDSClientException {
-    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
+    FDSListObjectsRequest listObjectsRequest = new FDSListObjectsRequest(bucketName);
+    listObjectsRequest.setPrefix(prefix);
+    listObjectsRequest.setDelimiter(delimiter);
+    listObjectsRequest.setReverse(reverse);
+    listObjectsRequest.setBackup(isBackup);
+    return listObjects(listObjectsRequest);
+  }
+
+  @Override public FDSObjectListing listObjects(FDSListObjectsRequest listObjectsRequest)
+      throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), listObjectsRequest.getBucketName(), (SubResource[]) null);
     HashMap<String, String> params = new HashMap<String, String>();
-    params.put("prefix", prefix);
-    params.put("reverse", String.valueOf(reverse));
-    params.put("isBackup", String.valueOf(isBackup));
-    params.put("delimiter", delimiter);
+    params.put("prefix", listObjectsRequest.getPrefix());
+    params.put("reverse", String.valueOf(listObjectsRequest.isReverse()));
+    params.put("isBackup", String.valueOf(listObjectsRequest.isBackup()));
+    params.put("delimiter", listObjectsRequest.getDelimiter());
+    if (listObjectsRequest.isWithMetaData()) {
+      params.put("withMetaData", "");
+    }
     HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.GET, null, null,
-      params, null, null);
+        params, null, null);
 
     HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest, Action.ListObjects);
 
     ListObjectsResult listObjectsResult = (ListObjectsResult) fdsHttpClient.processResponse(
-      response, ListObjectsResult.class,
-      "list objects under bucket [" + bucketName + "] with prefix [" + prefix + "]");
+        response, ListObjectsResult.class,
+        "list objects under bucket [" + listObjectsRequest.getBucketName()
+            + "] with prefix [" + listObjectsRequest.getPrefix() + "]");
     return getObjectListing(listObjectsResult);
   }
 
@@ -1374,63 +1388,6 @@ public class GalaxyFDSClient implements GalaxyFDS {
   }
 
   @Override
-  public void putDomainMapping(String bucketName, String domainName)
-      throws GalaxyFDSClientException {
-    putDomainMapping(bucketName, domainName, "index.html");
-  }
-
-  @Override
-  public void putDomainMapping(String bucketName, String domainName, String indexName)
-      throws GalaxyFDSClientException {
-    ContentType contentType = ContentType.APPLICATION_JSON;
-    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
-    HashMap<String, String> params = new HashMap<String, String>();
-    params.put("domain", domainName);
-    params.put("index", indexName);
-    StringEntity requestEntity = getJsonStringEntity("", contentType);
-    HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.PUT,
-      contentType, null, params, null, requestEntity);
-
-    HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest, Action.PutDomainMapping);
-
-    fdsHttpClient.processResponse(response, null,
-      "add domain mapping; bucket [" + bucketName + "], domainName [" + domainName + "]");
-  }
-
-  @Override
-  public List<String> listDomainMappings(String bucketName) throws GalaxyFDSClientException {
-    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
-    HashMap<String, String> params = new HashMap<String, String>();
-    params.put("domain", "");
-    HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.GET, null, null,
-      params, null, null);
-
-    HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest,
-      Action.ListDomainMappings);
-
-    ListDomainMappingsResult result = (ListDomainMappingsResult) fdsHttpClient.processResponse(
-      response, ListDomainMappingsResult.class,
-      "list domain mappings; bucket [" + bucketName + "]");
-    return result.getDomainMappings();
-  }
-
-  @Override
-  public void deleteDomainMapping(String bucketName, String domainName)
-      throws GalaxyFDSClientException {
-    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
-    HashMap<String, String> params = new HashMap<String, String>();
-    params.put("domain", domainName);
-    HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.DELETE, null,
-      null, params, null, null);
-
-    HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest,
-      Action.DeleteDomainMapping);
-
-    fdsHttpClient.processResponse(response, null,
-      "delete domain mapping; bucket [" + bucketName + "], domain [" + domainName + "]");
-  }
-
-  @Override
   public void cropImage(String bucketName, String objectName, int x, int y, int w, int h)
       throws GalaxyFDSClientException {
     ContentType contentType = ContentType.APPLICATION_OCTET_STREAM;
@@ -1518,6 +1475,35 @@ public class GalaxyFDSClient implements GalaxyFDS {
     acl.addGrant(new AccessControlList.Grant(AccessControlList.UserGroups.ALL_USERS.name(),
         AccessControlList.Permission.READ_OBJECTS, AccessControlList.GrantType.GROUP));
     setBucketAcl(bucketName, acl);
+  }
+
+  @Override public void setBucketOutsideAccess(String bucketName, boolean allowOutsideAccess)
+      throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName,
+        (SubResource[]) null);
+    ContentType contentType = ContentType.APPLICATION_JSON;
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("setOutsideAccess", String.valueOf(allowOutsideAccess));
+    HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.PUT,
+        contentType, null, params, null, null);
+    HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest, Action.SetObjectOutsideAccess);
+    fdsHttpClient.processResponse(response, null,
+        String.format("set bucketName [ %s ] outside access permission as [ %b ]", bucketName, allowOutsideAccess));
+  }
+
+  @Override
+  public void setObjectOutsideAccess(String bucketName, String objectName,
+      boolean allowOutsideAccess) throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName + "/" + objectName,
+        (SubResource[]) null);
+    ContentType contentType = ContentType.APPLICATION_JSON;
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("setOutsideAccess", String.valueOf(allowOutsideAccess));
+    HttpUriRequest httpRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.PUT,
+        contentType, null, params, null, null);
+    HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest, Action.SetObjectOutsideAccess);
+    fdsHttpClient.processResponse(response, null,
+        String.format("set object [ %s ] outside access permission as [ %b ]", objectName, allowOutsideAccess));
   }
 
   @Override
@@ -2427,5 +2413,65 @@ public class GalaxyFDSClient implements GalaxyFDS {
         contentType, null, params, null, requestEntity);
     HttpResponse response = fdsHttpClient.executeHttpRequest(httpRequest, Action.SetMetaData);
     fdsHttpClient.processResponse(response, null, String.format("update object [ %s ] metadata", objectName));
+  }
+
+  @Override
+  public void updateWebsiteConfig(String bucketName, WebsiteConfig websiteConfig) throws GalaxyFDSClientException {
+    ContentType contentType = ContentType.APPLICATION_JSON;
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("website", "");
+    StringEntity requestEntity;
+    try {
+      requestEntity = new StringEntity(websiteConfig.toJson(), contentType);
+    } catch (JSONException e) {
+      throw new GalaxyFDSClientException(e);
+    }
+    HttpUriRequest httpUriRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.PUT, contentType, null,
+      params, null, requestEntity);
+
+    HttpResponse response = fdsHttpClient.executeHttpRequest(httpUriRequest, Action.PutWebsiteConfig);
+
+    fdsHttpClient.processResponse(response, null, "Update bucket [" + bucketName + "] website config");
+  }
+
+  @Override
+  public void deleteWebsiteConfig(String bucketName) throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("website", "");
+    HttpUriRequest httpUriRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.DELETE, null, null,
+      params, null, null);
+
+    HttpResponse response = fdsHttpClient.executeHttpRequest(httpUriRequest, Action.DeleteWebsiteConfig);
+
+    fdsHttpClient.processResponse(response, null, "Delete bucket [" + bucketName + "] website config");
+  }
+
+  @Override
+  public WebsiteConfig getWebsiteConfig(final String bucketName) throws GalaxyFDSClientException {
+    URI uri = formatUri(fdsConfig.getBaseUri(), bucketName, (SubResource[]) null);
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("website", "");
+    HttpUriRequest httpUriRequest = fdsHttpClient.prepareRequestMethod(uri, HttpMethod.GET, null, null,
+      params, null,null);
+
+    HttpResponse response = fdsHttpClient.executeHttpRequest(httpUriRequest, Action.GetWebsiteConfig);
+
+    WebsiteConfig websiteConfig = fdsHttpClient.processResponse(response, WebsiteConfig.class,
+      new JsonDeserializer<WebsiteConfig>() {
+        @Override
+        public WebsiteConfig deserialize(JsonElement json, Type type,
+            JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+          try {
+            return WebsiteConfig.fromJson(json.toString());
+          } catch (JSONException e) {
+            String errorMsg = "Failed to get website config for bucket " + bucketName;
+            LOG.error(errorMsg);
+            throw new JsonParseException(errorMsg, e);
+          }
+        }
+      }, "Get bucket [" + bucketName + "] website config");
+    return websiteConfig;
   }
 }
